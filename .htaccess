@@ -1,0 +1,20 @@
+# The Travel CEO — proteksi dasar
+Options -Indexes
+AddDefaultCharset UTF-8
+RewriteEngine On
+
+# Pretty login admin panel
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^login-member/?$ index.php?p=login [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^login-panel/?$ index.php?p=login-panel [L,QSA]
+
+# Lindungi file sensitif
+<FilesMatch "^(config\.php|config\.sample\.php|database\.sql)$">
+  Require all denied
+</FilesMatch>
+
+# Halaman error ramah (opsional)
+ErrorDocument 403 "Akses ditolak."

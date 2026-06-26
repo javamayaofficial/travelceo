@@ -1,0 +1,90 @@
+[21-Jun-2026 07:05:08 UTC] PHP Warning:  session_start(): open(C:/laragon/tmp\sess_8lfjh71qmdnh57ricpj2dq81jn, O_RDWR) failed: No such file or directory (2) in D:\AI JADI BABU\TRAVEL CEO\the-travel-ceo-PRO\app\bootstrap.php on line 35
+[21-Jun-2026 07:05:08 UTC] PHP Warning:  session_start(): Failed to read session data: files (path: C:/laragon/tmp) in D:\AI JADI BABU\TRAVEL CEO\the-travel-ceo-PRO\app\bootstrap.php on line 35
+[21-Jun-2026 16:00:12 UTC] PHP Warning:  session_start(): open(C:/laragon/tmp\sess_164qtt2g3m7ffc3i77mpcgg348, O_RDWR) failed: No such file or directory (2) in D:\AI JADI BABU\TRAVEL CEO\the-travel-ceo-PRO\app\bootstrap.php on line 40
+[21-Jun-2026 16:00:12 UTC] PHP Warning:  session_start(): Failed to read session data: files (path: C:/laragon/tmp) in D:\AI JADI BABU\TRAVEL CEO\the-travel-ceo-PRO\app\bootstrap.php on line 40
+[21-Jun-2026 16:00:12 UTC] PHP Warning:  session_start(): open(C:/laragon/tmp\sess_164qtt2g3m7ffc3i77mpcgg348, O_RDWR) failed: No such file or directory (2) in D:\AI JADI BABU\TRAVEL CEO\the-travel-ceo-PRO\app\bootstrap.php on line 40
+[21-Jun-2026 16:00:12 UTC] PHP Warning:  session_start(): Failed to read session data: files (path: C:/laragon/tmp) in D:\AI JADI BABU\TRAVEL CEO\the-travel-ceo-PRO\app\bootstrap.php on line 40
+[22-Jun-2026 02:30:23 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ceotravel.salespages' doesn't exist in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php:8
+Stack trace:
+#0 /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php(8): PDO->query()
+#1 /var/www/travelceo/data/www/travelceo.id/index.php(18): page_home()
+#2 {main}
+  thrown in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php on line 8
+[22-Jun-2026 02:32:07 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ceotravel.products' doesn't exist in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php:47
+Stack trace:
+#0 /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php(47): PDO->query()
+#1 /var/www/travelceo/data/www/travelceo.id/index.php(20): page_products()
+#2 {main}
+  thrown in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php on line 47
+[22-Jun-2026 02:32:15 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ceotravel.salespages' doesn't exist in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php:8
+Stack trace:
+#0 /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php(8): PDO->query()
+#1 /var/www/travelceo/data/www/travelceo.id/index.php(18): page_home()
+#2 {main}
+  thrown in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php on line 8
+[22-Jun-2026 02:32:16 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ceotravel.salespages' doesn't exist in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php:8
+Stack trace:
+#0 /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php(8): PDO->query()
+#1 /var/www/travelceo/data/www/travelceo.id/index.php(18): page_home()
+#2 {main}
+  thrown in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php on line 8
+[22-Jun-2026 02:32:16 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ceotravel.salespages' doesn't exist in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php:8
+Stack trace:
+#0 /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php(8): PDO->query()
+#1 /var/www/travelceo/data/www/travelceo.id/index.php(18): page_home()
+#2 {main}
+  thrown in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php on line 8
+[22-Jun-2026 02:32:17 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ceotravel.salespages' doesn't exist in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php:8
+Stack trace:
+#0 /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php(8): PDO->query()
+#1 /var/www/travelceo/data/www/travelceo.id/index.php(18): page_home()
+#2 {main}
+  thrown in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php on line 8
+[22-Jun-2026 02:32:17 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ceotravel.salespages' doesn't exist in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php:8
+Stack trace:
+#0 /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php(8): PDO->query()
+#1 /var/www/travelceo/data/www/travelceo.id/index.php(18): page_home()
+#2 {main}
+  thrown in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php on line 8
+[22-Jun-2026 02:32:29 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ceotravel.salespages' doesn't exist in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php:8
+Stack trace:
+#0 /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php(8): PDO->query()
+#1 /var/www/travelceo/data/www/travelceo.id/index.php(18): page_home()
+#2 {main}
+  thrown in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php on line 8
+[22-Jun-2026 02:32:39 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ceotravel.salespages' doesn't exist in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php:8
+Stack trace:
+#0 /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php(8): PDO->query()
+#1 /var/www/travelceo/data/www/travelceo.id/index.php(18): page_home()
+#2 {main}
+  thrown in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php on line 8
+[22-Jun-2026 02:32:40 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ceotravel.salespages' doesn't exist in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php:8
+Stack trace:
+#0 /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php(8): PDO->query()
+#1 /var/www/travelceo/data/www/travelceo.id/index.php(18): page_home()
+#2 {main}
+  thrown in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php on line 8
+[22-Jun-2026 02:37:34 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ceotravel.salespages' doesn't exist in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php:8
+Stack trace:
+#0 /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php(8): PDO->query()
+#1 /var/www/travelceo/data/www/travelceo.id/index.php(18): page_home()
+#2 {main}
+  thrown in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php on line 8
+[22-Jun-2026 02:37:34 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ceotravel.salespages' doesn't exist in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php:8
+Stack trace:
+#0 /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php(8): PDO->query()
+#1 /var/www/travelceo/data/www/travelceo.id/index.php(18): page_home()
+#2 {main}
+  thrown in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php on line 8
+[22-Jun-2026 02:37:35 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ceotravel.salespages' doesn't exist in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php:8
+Stack trace:
+#0 /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php(8): PDO->query()
+#1 /var/www/travelceo/data/www/travelceo.id/index.php(18): page_home()
+#2 {main}
+  thrown in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php on line 8
+[22-Jun-2026 02:37:35 Asia/Jakarta] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'ceotravel.salespages' doesn't exist in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php:8
+Stack trace:
+#0 /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php(8): PDO->query()
+#1 /var/www/travelceo/data/www/travelceo.id/index.php(18): page_home()
+#2 {main}
+  thrown in /var/www/travelceo/data/www/travelceo.id/app/controllers/PageController.php on line 8
