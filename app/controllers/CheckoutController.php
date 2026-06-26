@@ -232,6 +232,7 @@ function checkout_process() {
     $pdo = db();
     $code = 'TRX' . date('ymd') . strtoupper(bin2hex(random_bytes(2)));
     $proofFile = null;
+    $selectedMethod = $methodMap[$bank] ?? null;
 
     try {
         $pdo->beginTransaction();
@@ -327,13 +328,34 @@ function checkout_process() {
     }
 
     log_activity('checkout', "Order $code untuk {$product['title']}");
-    fonnte_send($u['wa'], wa_template('purchase', [
-        'nama' => $u['name'], 'produk' => $product['title'], 'kode' => $code, 'total' => rupiah($total),
-    ]));
-    $mail = mail_template('purchase', [
-        'nama' => $u['name'], 'produk' => $product['title'], 'kode' => $code, 'total' => rupiah($total),
+    $buyerWaMessage = wa_template('purchase', [
+        'nama' => $u['name'],
+        'produk' => $product['title'],
+        'kode' => $code,
+        'total' => rupiah($total),
     ]);
-    mailketing_send($u['email'], $mail['subject'], $mail['html']);
+    $buyerMail = mail_template('purchase', [
+        'nama' => $u['name'],
+        'produk' => $product['title'],
+        'kode' => $code,
+        'total' => rupiah($total),
+    ]);
+
+    if ($selectedMethod && (($selectedMethod['type'] ?? '') === 'bank')) {
+        $bankLabel = trim((string)($selectedMethod['label'] ?? ''));
+        $bankDetail = trim((string)($selectedMethod['detail'] ?? ''));
+        if ($bankLabel !== '' && $bankDetail !== '') {
+            $buyerWaMessage .= "\n\nInstruksi Transfer:\nBank: {$bankLabel}\nRekening: {$bankDetail}\nNominal: " . rupiah($total) . "\nBerita: {$code}";
+            $buyerMail['html'] .= '<hr>'
+                . '<p><strong>Instruksi Transfer</strong></p>'
+                . '<p>Silakan transfer ke rekening <strong>' . e($bankLabel) . '</strong>:</p>'
+                . '<p><strong>' . e($bankDetail) . '</strong></p>'
+                . '<p>Nominal transfer: <strong>' . e(rupiah($total)) . '</strong><br>Berita transfer: <strong>' . e($code) . '</strong></p>';
+        }
+    }
+
+    fonnte_send($u['wa'], $buyerWaMessage);
+    mailketing_send($u['email'], $buyerMail['subject'], $buyerMail['html']);
     // Notifikasi ke admin
     if ($adminWa = setting('site_wa', '')) {
         fonnte_send($adminWa, "🔔 Order baru {$code}\nProduk: {$product['title']}\nDari: {$u['name']}\nTotal: " . rupiah($total) . "\nCek admin untuk verifikasi.");
@@ -348,6 +370,17 @@ function checkout_process() {
     flash('success', 'Pesanan diterima! Mohon tunggu verifikasi pembayaran dari admin.');
     view('layout', [
         'title' => 'Pesanan Diterima', 'content' => 'checkout_success',
-        'vars' => ['code' => $code, 'product' => $product, 'total' => $total, 'account_created' => $accountCreated],
+        'vars' => [
+            'code' => $code,
+            'product' => $product,
+            'total' => $total,
+            'account_created' => $accountCreated,
+            'payment_method' => $selectedMethod ? [
+                'type' => (string)($selectedMethod['type'] ?? ''),
+                'label' => (string)($selectedMethod['label'] ?? ''),
+                'detail' => (string)($selectedMethod['detail'] ?? ''),
+                'image' => (string)($selectedMethod['image'] ?? ''),
+            ] : null,
+        ],
     ]);
 }

@@ -167,6 +167,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ->execute([password_hash($plain, PASSWORD_DEFAULT), $id]);
                 $pdo->prepare("DELETE FROM login_otps WHERE user_id = ?")->execute([$id]);
                 $pdo->prepare("DELETE FROM password_resets WHERE user_id = ?")->execute([$id]);
+                $txSt = $pdo->prepare("SELECT t.*, p.title ptitle, p.type ptype, u.name uname, u.wa uwa, u.email uemail
+                                       FROM transactions t
+                                       JOIN products p ON p.id = t.product_id
+                                       JOIN users u ON u.id = t.user_id
+                                       WHERE t.user_id = ?
+                                       ORDER BY t.id DESC
+                                       LIMIT 1");
+                $txSt->execute([$id]);
+                $tx = $txSt->fetch() ?: null;
+
+                $ticket = null;
+                $ticketLink = '';
+                $qrUrl = '';
+                if ($tx) {
+                    $ticket = ticket_issue_for_transaction_any($tx);
+                    if ($ticket) {
+                        $ticketLink = ticket_url($ticket['ticket_token']);
+                        $qrUrl = ticket_qr_image_url($ticket['ticket_token']);
+                    }
+                }
+
                 $pdo->commit();
 
                 $loginLink = login_member_url();
@@ -175,12 +196,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'username' => $member['email'],
                     'password' => $plain,
                     'login' => $loginLink,
+                    'kode' => (string)($tx['code'] ?? '-'),
+                    'ticket' => (string)($ticket['ticket_code'] ?? '-'),
+                    'ticket_link' => $ticketLink !== '' ? $ticketLink : $loginLink,
+                    'qr_url' => $qrUrl !== '' ? $qrUrl : '',
                 ]);
                 if (!empty($member['email']) && mailketing_token() && mail_sender_email()) {
                     mailketing_send($member['email'], $mail['subject'], $mail['html']);
                 }
                 if (!empty($member['wa']) && fonnte_token()) {
                     $msg = "Halo {$member['name']},\n\nMembership Anda telah disetujui.\n\nSilakan login menggunakan akun berikut.\n\nUsername:\n{$member['email']}\n\nPassword:\n{$plain}\n\nLogin:\n{$loginLink}";
+                    if (!empty($tx['code'])) {
+                        $msg .= "\n\nKode Invoice:\n{$tx['code']}";
+                    }
+                    if (!empty($ticket['ticket_code'])) {
+                        $msg .= "\n\nKode E-Ticket:\n{$ticket['ticket_code']}";
+                    }
+                    if ($ticketLink !== '') {
+                        $msg .= "\n\nE-Ticket & QR:\n{$ticketLink}";
+                    }
                     fonnte_send($member['wa'], $msg);
                 }
                 log_activity('approve_member', 'member_id=' . $id . '; email=' . ($member['email'] ?? ''));

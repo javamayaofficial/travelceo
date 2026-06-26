@@ -626,7 +626,7 @@ function mail_template($key, $vars = []) {
         ],
         'member_approved' => [
             'subject' => 'Akun membership Anda sudah aktif — ' . $site,
-            'html' => '<p>Halo {nama},</p><p>Membership Anda sudah disetujui.</p><p>Silakan login menggunakan akun berikut:</p><p>Username: <strong>{username}</strong><br>Password: <strong>{password}</strong></p><p>Login: <a href="{login}">{login}</a></p>',
+            'html' => '<p>Halo {nama},</p><p>Membership Anda sudah disetujui.</p><p>Silakan login menggunakan akun berikut:</p><p>Username: <strong>{username}</strong><br>Password: <strong>{password}</strong></p><p>Login: <a href="{login}">{login}</a></p><hr><p><strong>E-Ticket</strong></p><p>Kode Invoice: <strong>{kode}</strong><br>Kode E-Ticket: <strong>{ticket}</strong></p><p>Link E-Ticket: <a href="{ticket_link}">{ticket_link}</a></p><p><img src="{qr_url}" alt="QR E-Ticket" style="width:220px;height:220px"></p>',
         ],
         'otp_login_email' => [
             'subject' => 'Kode OTP login Anda',
@@ -771,6 +771,38 @@ function ticket_issue_for_transaction(array $transaction) {
         $ticketToken,
         (string)$transaction['uname'],
         (string)$transaction['uemail'],
+        trim((string)($transaction['uwa'] ?? '')) ?: null,
+        $issuedAt,
+    ]);
+
+    $fetch = $pdo->prepare("SELECT * FROM event_tickets WHERE transaction_id = ? LIMIT 1");
+    $fetch->execute([(int)$transaction['id']]);
+    return $fetch->fetch() ?: null;
+}
+
+function ticket_issue_for_transaction_any(array $transaction) {
+    ensure_runtime_schema();
+    $pdo = db();
+    $check = $pdo->prepare("SELECT * FROM event_tickets WHERE transaction_id = ? LIMIT 1");
+    $check->execute([(int)$transaction['id']]);
+    $existing = $check->fetch();
+    if ($existing) return $existing;
+
+    $ticketCode = 'ETK' . date('ymd') . strtoupper(bin2hex(random_bytes(2)));
+    $ticketToken = bin2hex(random_bytes(24));
+    $issuedAt = !empty($transaction['approved_at']) ? $transaction['approved_at'] : date('Y-m-d H:i:s');
+
+    $ins = $pdo->prepare("INSERT INTO event_tickets
+        (transaction_id, user_id, product_id, ticket_code, ticket_token, attendee_name, attendee_email, attendee_wa, status, issued_at, created_at)
+        VALUES (?,?,?,?,?,?,?,?, 'active', ?, NOW())");
+    $ins->execute([
+        (int)$transaction['id'],
+        (int)$transaction['user_id'],
+        (int)$transaction['product_id'],
+        $ticketCode,
+        $ticketToken,
+        (string)($transaction['uname'] ?? ''),
+        (string)($transaction['uemail'] ?? ''),
         trim((string)($transaction['uwa'] ?? '')) ?: null,
         $issuedAt,
     ]);

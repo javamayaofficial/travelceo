@@ -8,9 +8,9 @@
   <article class="event-ticket-card">
     <div class="event-ticket-head">
       <div>
-        <span class="ticket-kicker">E-Ticket Workshop</span>
+        <span class="ticket-kicker">E-Ticket <?= e(strtoupper((string)($ticket['product_type'] ?? ''))) ?: 'PROGRAM' ?></span>
         <h1><?= e($ticket['product_title']) ?></h1>
-        <p class="muted">Terima kasih sudah ikut workshop bersama <?= e(setting('site_name', 'The Travel CEO')) ?>.</p>
+        <p class="muted">Terima kasih telah melakukan pembelian di <?= e(setting('site_name', 'The Travel CEO')) ?>.</p>
       </div>
       <div class="ticket-code-box">
         <span>Kode Tiket</span>
