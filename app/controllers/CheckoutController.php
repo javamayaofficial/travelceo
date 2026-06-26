@@ -345,20 +345,19 @@ function checkout_process() {
         $bankLabel = trim((string)($selectedMethod['label'] ?? ''));
         $bankDetail = trim((string)($selectedMethod['detail'] ?? ''));
         if ($bankLabel !== '' && $bankDetail !== '') {
-            $buyerWaMessage .= "\n\nInstruksi Pembayaran\n"
+            $buyerWaMessage .= "\n\nSilakan melakukan pembayaran ke rekening berikut:\n"
                 . "Bank Tujuan: {$bankLabel}\n"
                 . "Nomor Rekening: {$bankDetail}\n"
-                . "Nominal Transfer: " . rupiah($total) . "\n"
-                . "Berita Transfer: {$code}\n\n"
-                . "Mohon lakukan pembayaran sesuai nominal di atas agar proses verifikasi dapat dilakukan dengan lebih cepat.";
+                . "Nominal Pembayaran: " . rupiah($total) . "\n"
+                . "Kode Referensi: {$code}\n\n"
+                . "Mohon melakukan pembayaran sesuai nominal yang tertera agar proses verifikasi dapat dilakukan dengan lebih cepat.";
             $buyerMail['html'] .= '<hr>'
-                . '<p><strong>Instruksi Pembayaran</strong></p>'
-                . '<p>Silakan melakukan transfer ke rekening berikut:</p>'
+                . '<p>Silakan melakukan pembayaran ke rekening berikut:</p>'
                 . '<p><strong>Bank Tujuan:</strong> ' . e($bankLabel) . '<br>'
                 . '<strong>Nomor Rekening:</strong> ' . e($bankDetail) . '<br>'
-                . '<strong>Nominal Transfer:</strong> ' . e(rupiah($total)) . '<br>'
-                . '<strong>Berita Transfer:</strong> ' . e($code) . '</p>'
-                . '<p>Mohon melakukan pembayaran sesuai nominal di atas agar proses verifikasi dapat dilakukan dengan lebih cepat.</p>';
+                . '<strong>Nominal Pembayaran:</strong> ' . e(rupiah($total)) . '<br>'
+                . '<strong>Kode Referensi:</strong> ' . e($code) . '</p>'
+                . '<p>Mohon melakukan pembayaran sesuai nominal yang tertera agar proses verifikasi dapat dilakukan dengan lebih cepat.</p>';
         }
     }
 

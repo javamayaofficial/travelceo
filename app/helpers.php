@@ -618,7 +618,7 @@ function mail_template($key, $vars = []) {
         ],
         'purchase' => [
             'subject' => 'Pesanan Anda diterima: {kode}',
-            'html' => '<p>Halo {nama},</p><p>Terima kasih. Pesanan Anda untuk program <strong>{produk}</strong> telah kami terima.</p><p><strong>Kode Invoice:</strong> {kode}<br><strong>Total Pembayaran:</strong> {total}</p><p>Silakan lakukan pembayaran sesuai instruksi yang tertera. Setelah pembayaran kami terima, pesanan Anda akan segera diproses oleh tim kami.</p>',
+            'html' => '<p>Halo {nama},</p><p>Terima kasih. Pesanan Anda untuk program <strong>{produk}</strong> telah kami terima.</p><p><strong>Kode Invoice:</strong> {kode}<br><strong>Total Pembayaran:</strong> {total}</p><p>Berikut kami sampaikan detail pembayaran untuk penyelesaian pesanan Anda. Setelah pembayaran kami terima, pesanan akan segera diproses oleh tim kami.</p>',
         ],
         'checkout_access' => [
             'subject' => 'Akses akun Anda di ' . $site,
