@@ -543,7 +543,7 @@ function wa_template($key, $vars = []) {
     if (!$tpl) {
         $defaults = [
             'register'  => "Halo {nama}, selamat datang di " . setting('site_name', 'The Travel CEO') . "! Akun Anda berhasil dibuat. Yuk mulai naik kelas. 🚀",
-            'purchase'  => "Halo {nama}, pesanan {produk} ({kode}) sebesar {total} kami terima. Mohon tunggu verifikasi pembayaran ya. 🙏",
+            'purchase'  => "Halo {nama},\n\nTerima kasih. Pesanan Anda untuk program {produk} telah kami terima.\n\nKode Invoice: {kode}\nTotal Pembayaran: {total}\n\nSilakan lakukan pembayaran sesuai instruksi yang tertera. Setelah pembayaran kami terima, pesanan Anda akan segera diproses oleh tim kami.",
             'checkout_access' => "Halo {nama}, akun Anda di " . setting('site_name', 'The Travel CEO') . " berhasil dibuat.\nEmail: {email}\nWhatsApp: {wa}\nLogin member: {login}\nSilakan masuk memakai OTP WhatsApp atau tombol Google dengan email yang terdaftar.",
             'ticket_ready' => "Halo {nama}, pembayaran {produk} sudah disetujui.\nE-ticket Anda siap diunduh.\nKode tiket: {ticket}\nLink tiket: {link}\nTerima kasih sudah ikut workshop bersama kami.",
             'approved'  => "Halo {nama}, pembayaran untuk {produk} sudah DISETUJUI ✅. Kelas Anda kini terbuka. Selamat belajar!",
@@ -618,7 +618,7 @@ function mail_template($key, $vars = []) {
         ],
         'purchase' => [
             'subject' => 'Pesanan Anda diterima: {kode}',
-            'html' => '<p>Halo {nama},</p><p>Pesanan untuk <strong>{produk}</strong> dengan kode <strong>{kode}</strong> sudah kami terima.</p><p>Total pembayaran: <strong>{total}</strong>.</p><p>Mohon tunggu verifikasi pembayaran dari admin.</p>',
+            'html' => '<p>Halo {nama},</p><p>Terima kasih. Pesanan Anda untuk program <strong>{produk}</strong> telah kami terima.</p><p><strong>Kode Invoice:</strong> {kode}<br><strong>Total Pembayaran:</strong> {total}</p><p>Silakan lakukan pembayaran sesuai instruksi yang tertera. Setelah pembayaran kami terima, pesanan Anda akan segera diproses oleh tim kami.</p>',
         ],
         'checkout_access' => [
             'subject' => 'Akses akun Anda di ' . $site,
