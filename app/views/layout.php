@@ -67,7 +67,6 @@ fbq('track', 'PageView');
         <a href="<?= e(url('logout')) ?>" class="btn btn-ghost btn-sm">Keluar</a>
       <?php else: ?>
         <a href="<?= e(login_member_url()) ?>" class="nav-link">Masuk</a>
-        <a href="<?= e(url('register')) ?>" class="btn btn-primary btn-sm">Daftar</a>
       <?php endif; ?>
     </nav>
   </div>
@@ -94,7 +93,6 @@ fbq('track', 'PageView');
       <a href="<?= e(url('home')) ?>">Beranda</a>
       <a href="<?= e(url('products')) ?>">Semua Kelas</a>
       <a href="<?= e(url('blog')) ?>">Blog</a>
-      <a href="<?= e(url('register')) ?>">Daftar Member</a>
     </div>
     <div>
       <h4>Kontak</h4>

@@ -72,7 +72,7 @@ $siteName = setting('site_name', 'The Travel CEO');
     <?php endif; ?>
 
     <div class="auth-foot">
-      <span>Belum punya akun? <a href="<?= e(url('register')) ?>">Daftar</a></span>
+      <a href="<?= e(url('forgot')) ?>">Lupa Password</a>
     </div>
   </div>
 </section>

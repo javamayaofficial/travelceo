@@ -268,6 +268,30 @@ function ensure_runtime_schema() {
     if ($done) return;
     $done = true;
     try {
+        $userColumns = [
+            'member_status' => "ALTER TABLE `users` ADD COLUMN `member_status` ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending' AFTER `status`",
+            'approved_at' => "ALTER TABLE `users` ADD COLUMN `approved_at` DATETIME NULL AFTER `member_status`",
+            'deleted_at' => "ALTER TABLE `users` ADD COLUMN `deleted_at` DATETIME NULL AFTER `created_at`",
+        ];
+        foreach ($userColumns as $column => $sql) {
+            $hasColumn = db()->query("SHOW COLUMNS FROM `users` LIKE " . db()->quote($column))->fetch();
+            if (!$hasColumn) db()->exec($sql);
+        }
+
+        $passwordCol = db()->query("SHOW COLUMNS FROM `users` LIKE 'password'")->fetch();
+        if ($passwordCol && (($passwordCol['Null'] ?? 'NO') === 'NO')) {
+            db()->exec("ALTER TABLE `users` MODIFY COLUMN `password` VARCHAR(255) NULL");
+        }
+
+        $hasMemberStatus = db()->query("SHOW COLUMNS FROM `users` LIKE 'member_status'")->fetch();
+        if ($hasMemberStatus) {
+            db()->exec("UPDATE `users`
+                        SET member_status = 'approved', approved_at = COALESCE(approved_at, created_at)
+                        WHERE role = 'member'
+                          AND status = 'active'
+                          AND (member_status IS NULL OR member_status = 'pending')");
+        }
+
         db()->exec("CREATE TABLE IF NOT EXISTS `login_otps` (
             `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
             `user_id` INT UNSIGNED NOT NULL,
@@ -425,6 +449,21 @@ function current_user() {
 function is_logged_in() { return current_user() !== null; }
 function is_admin() { $u = current_user(); return $u && $u['role'] === 'admin'; }
 
+function member_block_message($status) {
+    $status = strtolower(trim((string)$status));
+    if ($status === 'rejected') return 'Pendaftaran Anda ditolak. Silakan hubungi Admin.';
+    return 'Pendaftaran Anda sedang menunggu persetujuan Admin.';
+}
+
+function member_is_approved($u) {
+    if (!$u) return false;
+    if (($u['role'] ?? 'member') !== 'member') return true;
+    if (!empty($u['deleted_at'])) return false;
+    if (($u['status'] ?? 'inactive') !== 'active') return false;
+    if (($u['member_status'] ?? 'approved') !== 'approved') return false;
+    return true;
+}
+
 function require_login() {
     if (!is_logged_in()) { flash('error', 'Silakan login dulu untuk melanjutkan.'); redirect(login_member_url()); }
 }
@@ -435,6 +474,19 @@ function require_member() {
     }
     if (is_admin()) {
         redirect(admin_url('dashboard'));
+    }
+    $u = current_user();
+    if (!member_is_approved($u)) {
+        $msg = member_block_message($u['member_status'] ?? 'pending');
+        $_SESSION = [];
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 3600, $params['path'], $params['domain'] ?? '', (bool)$params['secure'], (bool)$params['httponly']);
+        }
+        session_destroy();
+        session_start();
+        flash('error', $msg);
+        redirect(login_member_url());
     }
 }
 function require_admin() {
@@ -504,6 +556,17 @@ function wa_template($key, $vars = []) {
     return $tpl;
 }
 
+function generate_secure_password($length = 12) {
+    $length = max(10, (int)$length);
+    $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+    $max = strlen($chars) - 1;
+    $pass = '';
+    for ($i = 0; $i < $length; $i++) {
+        $pass .= $chars[random_int(0, $max)];
+    }
+    return $pass;
+}
+
 /* ---------- Integrasi Email (Mailketing) ---------- */
 function mailketing_token() {
     $token = trim((string)config_value('mailketing_token', ''));
@@ -560,6 +623,10 @@ function mail_template($key, $vars = []) {
         'checkout_access' => [
             'subject' => 'Akses akun Anda di ' . $site,
             'html' => '<p>Halo {nama},</p><p>Akun Anda di <strong>' . e($site) . '</strong> berhasil dibuat.</p><p>Email: <strong>{email}</strong><br>WhatsApp: <strong>{wa}</strong></p><p>Masuk di sini: <a href="{login}">{login}</a></p><p>Silakan login memakai OTP WhatsApp atau tombol Google dengan email yang terdaftar.</p>',
+        ],
+        'member_approved' => [
+            'subject' => 'Akun membership Anda sudah aktif — ' . $site,
+            'html' => '<p>Halo {nama},</p><p>Membership Anda sudah disetujui.</p><p>Silakan login menggunakan akun berikut:</p><p>Username: <strong>{username}</strong><br>Password: <strong>{password}</strong></p><p>Login: <a href="{login}">{login}</a></p>',
         ],
         'otp_login_email' => [
             'subject' => 'Kode OTP login Anda',

@@ -115,53 +115,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect(admin_url('transactions'));
     }
 
-    /* --- Hapus member --- */
-    if ($act === 'delete_member') {
+    if ($act === 'approve_member' || $act === 'reject_member' || $act === 'delete_member') {
         $id = (int)($_POST['id'] ?? 0);
         if ($id <= 0) {
             flash('error', 'Member tidak valid.');
             redirect(admin_url('members'));
         }
         if (!empty($_SESSION['uid']) && $id === (int)$_SESSION['uid']) {
-            flash('error', 'Anda tidak bisa menghapus akun yang sedang dipakai login.');
+            flash('error', 'Anda tidak bisa memproses akun yang sedang dipakai login.');
             redirect(admin_url('members'));
         }
 
         $pdo = db();
         try {
             $pdo->beginTransaction();
-
-            $memberSt = $pdo->prepare("SELECT * FROM users WHERE id = ? AND role = 'member' LIMIT 1 FOR UPDATE");
+            $memberSt = $pdo->prepare("SELECT * FROM users WHERE id = ? AND role = 'member' AND deleted_at IS NULL LIMIT 1 FOR UPDATE");
             $memberSt->execute([$id]);
             $member = $memberSt->fetch();
             if (!$member) throw new RuntimeException('Member tidak ditemukan.');
 
-            $txIds = $pdo->prepare("SELECT id FROM transactions WHERE user_id = ?");
-            $txIds->execute([$id]);
-            $transactionIds = array_map('intval', array_column($txIds->fetchAll(), 'id'));
+            if ($act === 'approve_member') {
+                if (($member['member_status'] ?? '') === 'approved' && ($member['status'] ?? '') === 'active') {
+                    $pdo->commit();
+                    flash('success', 'Member sudah berstatus approved.');
+                    redirect(admin_url('members'));
+                }
 
-            if ($transactionIds) {
-                $in = implode(',', array_fill(0, count($transactionIds), '?'));
-                $pdo->prepare("DELETE FROM event_tickets WHERE transaction_id IN ($in)")->execute($transactionIds);
-                $pdo->prepare("DELETE FROM commissions WHERE transaction_id IN ($in)")->execute($transactionIds);
-                $pdo->prepare("DELETE FROM transactions WHERE id IN ($in)")->execute($transactionIds);
+                $plain = generate_secure_password(12);
+                $pdo->prepare("UPDATE users
+                               SET member_status = 'approved', status = 'active',
+                                   password = ?, approved_at = NOW()
+                               WHERE id = ? AND role = 'member'")
+                    ->execute([password_hash($plain, PASSWORD_DEFAULT), $id]);
+                $pdo->prepare("DELETE FROM login_otps WHERE user_id = ?")->execute([$id]);
+                $pdo->prepare("DELETE FROM password_resets WHERE user_id = ?")->execute([$id]);
+                $pdo->commit();
+
+                $loginLink = login_member_url();
+                $mail = mail_template('member_approved', [
+                    'nama' => $member['name'],
+                    'username' => $member['email'],
+                    'password' => $plain,
+                    'login' => $loginLink,
+                ]);
+                if (!empty($member['email']) && mailketing_token() && mail_sender_email()) {
+                    mailketing_send($member['email'], $mail['subject'], $mail['html']);
+                }
+                if (!empty($member['wa']) && fonnte_token()) {
+                    $msg = "Halo {$member['name']},\n\nMembership Anda telah disetujui.\n\nSilakan login menggunakan akun berikut.\n\nUsername:\n{$member['email']}\n\nPassword:\n{$plain}\n\nLogin:\n{$loginLink}";
+                    fonnte_send($member['wa'], $msg);
+                }
+                log_activity('approve_member', 'member_id=' . $id . '; email=' . ($member['email'] ?? ''));
+                flash('success', 'Member berhasil di-approve.');
+                redirect(admin_url('members'));
             }
 
-            $pdo->prepare("DELETE FROM event_tickets WHERE user_id = ?")->execute([$id]);
-            $pdo->prepare("DELETE FROM enrollments WHERE user_id = ?")->execute([$id]);
-            $pdo->prepare("DELETE p FROM progress p INNER JOIN lessons l ON l.id = p.lesson_id WHERE p.user_id = ?")->execute([$id]);
-            $pdo->prepare("DELETE FROM commissions WHERE affiliate_id = ?")->execute([$id]);
-            $pdo->prepare("DELETE FROM commission_withdrawals WHERE affiliate_id = ?")->execute([$id]);
-            $pdo->prepare("DELETE FROM clicks WHERE affiliate_id = ?")->execute([$id]);
+            if ($act === 'reject_member') {
+                $pdo->prepare("UPDATE users
+                               SET member_status = 'rejected', status = 'inactive',
+                                   password = NULL, approved_at = NULL
+                               WHERE id = ? AND role = 'member'")->execute([$id]);
+                $pdo->prepare("DELETE FROM login_otps WHERE user_id = ?")->execute([$id]);
+                $pdo->prepare("DELETE FROM password_resets WHERE user_id = ?")->execute([$id]);
+                $pdo->commit();
+                log_activity('reject_member', 'member_id=' . $id . '; email=' . ($member['email'] ?? ''));
+                flash('success', 'Member berhasil di-reject.');
+                redirect(admin_url('members'));
+            }
+
+            $pdo->prepare("UPDATE users
+                           SET deleted_at = NOW(), member_status = 'rejected', status = 'inactive',
+                               password = NULL, wa = NULL
+                           WHERE id = ? AND role = 'member'")->execute([$id]);
             $pdo->prepare("DELETE FROM login_otps WHERE user_id = ?")->execute([$id]);
             $pdo->prepare("DELETE FROM password_resets WHERE user_id = ?")->execute([$id]);
-            $pdo->prepare("UPDATE users SET referred_by = NULL WHERE referred_by = ?")->execute([$id]);
-            $pdo->prepare("UPDATE activity_logs SET user_id = NULL WHERE user_id = ?")->execute([$id]);
-            $pdo->prepare("DELETE FROM users WHERE id = ? AND role = 'member'")->execute([$id]);
-
+            $pdo->prepare("DELETE FROM enrollments WHERE user_id = ?")->execute([$id]);
+            $pdo->prepare("DELETE p FROM progress p INNER JOIN lessons l ON l.id = p.lesson_id WHERE p.user_id = ?")->execute([$id]);
             $pdo->commit();
-            log_activity('delete_member', $member['email'] . ' (#' . $id . ')');
-            flash('success', 'Member berhasil dihapus beserta data terkaitnya.');
+            log_activity('delete_member', 'member_id=' . $id . '; email=' . ($member['email'] ?? ''));
+            flash('success', 'Member berhasil dihapus.');
         } catch (Exception $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             flash('error', $e->getMessage());

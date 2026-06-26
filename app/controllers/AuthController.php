@@ -59,7 +59,7 @@ function auth_find_login_user_by_wa($waInput, &$error = null) {
     }
 
     $wa = wa_normalize($waInput);
-    $st = db()->prepare("SELECT * FROM users WHERE wa = ? ORDER BY id DESC LIMIT 2");
+    $st = db()->prepare("SELECT * FROM users WHERE wa = ? AND deleted_at IS NULL ORDER BY id DESC LIMIT 2");
     $st->execute([$wa]);
     $rows = $st->fetchAll();
     if (count($rows) > 1) {
@@ -72,7 +72,7 @@ function auth_find_login_user_by_wa($waInput, &$error = null) {
 function auth_find_login_user_by_email($email) {
     $email = trim((string)$email);
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) return null;
-    $st = db()->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
+    $st = db()->prepare("SELECT * FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1");
     $st->execute([$email]);
     return $st->fetch() ?: null;
 }
@@ -148,11 +148,11 @@ function auth_register() {
                 $referred_by = $r->fetchColumn() ?: null;
             }
 
-            $ins = db()->prepare("INSERT INTO users (name,email,password,wa,role,status,ref_code,referred_by,created_at)
-                                  VALUES (?,?,?,?,?,?,?,?,NOW())");
+            $ins = db()->prepare("INSERT INTO users (name,email,password,wa,role,status,member_status,approved_at,ref_code,referred_by,created_at)
+                                  VALUES (?,?,?,?,?, 'active', 'approved', NOW(), ?, ?, NOW())");
             $ins->execute([
                 $old['name'], $old['email'], password_hash($pass, PASSWORD_DEFAULT),
-                $normalizedWa, 'member', 'active', $ref, $referred_by
+                $normalizedWa, 'member', $ref, $referred_by
             ]);
             $uid = db()->lastInsertId();
             $_SESSION['uid'] = $uid;
@@ -204,7 +204,7 @@ function auth_admin_login() {
             $st = db()->prepare("SELECT * FROM users WHERE email = ?");
             $st->execute([$email]);
             $u = $st->fetch();
-            if ($u && password_verify($pass, $u['password'])) {
+            if ($u && !empty($u['password']) && password_verify($pass, (string)$u['password'])) {
                 login_rate_limit_clear($email);
                 if ($u['status'] !== 'active') {
                     $errors[] = 'Akun admin belum aktif. Silakan hubungi super admin.';
@@ -304,8 +304,10 @@ function auth_login_otp_request() {
         $u = auth_find_login_user_by_wa($phone, $findError);
         if ($findError) {
             $errors[] = $findError;
-        } elseif (!$u || $u['status'] !== 'active') {
-            $errors[] = 'Akun tidak ditemukan atau belum aktif.';
+        } elseif (!$u || ($u['role'] ?? 'member') !== 'member') {
+            $errors[] = 'Akun tidak ditemukan.';
+        } elseif (!member_is_approved($u)) {
+            $errors[] = member_block_message($u['member_status'] ?? 'pending');
         } else {
             $issued = otp_issue((int)$u['id'], 'login');
             if (!$issued['ok']) {
@@ -349,8 +351,10 @@ function auth_login_otp_verify() {
         $u = auth_find_login_user_by_wa($phone, $findError);
         if ($findError) {
             $errors[] = $findError;
-        } elseif (!$u || $u['status'] !== 'active') {
-            $errors[] = 'Akun tidak ditemukan atau belum aktif.';
+        } elseif (!$u || ($u['role'] ?? 'member') !== 'member') {
+            $errors[] = 'Akun tidak ditemukan.';
+        } elseif (!member_is_approved($u)) {
+            $errors[] = member_block_message($u['member_status'] ?? 'pending');
         } else {
             $verified = otp_verify((int)$u['id'], $code, 'login');
             if (!$verified['ok']) {
@@ -382,8 +386,8 @@ function auth_google_login() {
                 $u = auth_find_login_user_by_email((string)$payload['email']);
                 if (!$u || ($u['role'] ?? 'member') !== 'member') {
                     $errors[] = 'Email Google ini belum terdaftar sebagai member.';
-                } elseif ($u['status'] !== 'active') {
-                    $errors[] = 'Akun member belum aktif.';
+                } elseif (!member_is_approved($u)) {
+                    $errors[] = member_block_message($u['member_status'] ?? 'pending');
                 } else {
                     log_activity('google_login', $u['email']);
                     auth_finish_login($u);
@@ -417,11 +421,11 @@ function auth_forgot() {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $errors[] = 'Masukkan alamat email yang valid.';
         } else {
-            $st = db()->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
+            $st = db()->prepare("SELECT * FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1");
             $st->execute([$email]);
             $u = $st->fetch();
 
-            if ($u && $u['status'] === 'active' && mailketing_token() && mail_sender_email()) {
+            if ($u && member_is_approved($u) && mailketing_token() && mail_sender_email()) {
                 $issued = password_reset_issue((int)$u['id']);
                 if (!$issued['ok']) {
                     $errors[] = $issued['error'];

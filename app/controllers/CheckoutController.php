@@ -159,6 +159,7 @@ function checkout_process() {
     check_csrf();
     $product = _find_product_by_slug($_POST['slug'] ?? '');
     if (!$product) { flash('error', 'Produk tidak ditemukan.'); redirect(url('products')); }
+    $isMembership = (($product['type'] ?? '') === 'membership');
 
     $isLoggedIn = !empty($_SESSION['uid']);
     $u = $isLoggedIn ? current_user() : null;
@@ -197,7 +198,7 @@ function checkout_process() {
         }
 
         if (!$errors) {
-            $st = db()->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
+            $st = db()->prepare("SELECT * FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1");
             $st->execute([$buyerEmail]);
             $existingUser = $st->fetch() ?: null;
 
@@ -205,7 +206,7 @@ function checkout_process() {
                 $errors[] = 'Email ini sudah terdaftar. Silakan login dulu sebelum melakukan checkout.';
             }
             if (!$existingUser && $normalizedWa !== '') {
-                $chkWa = db()->prepare("SELECT 1 FROM users WHERE wa = ?");
+                $chkWa = db()->prepare("SELECT 1 FROM users WHERE wa = ? AND deleted_at IS NULL");
                 $chkWa->execute([$normalizedWa]);
                 if ($chkWa->fetchColumn()) $errors[] = 'Nomor WhatsApp sudah dipakai akun lain. Silakan login dulu dengan akun yang sudah ada.';
             }
@@ -252,25 +253,38 @@ function checkout_process() {
             } else {
                 $refCodeUser = _checkout_make_ref_code($buyerName, $pdo);
                 $referredBy = null;
-                $generatedPassword = _checkout_generate_password();
+                $generatedPassword = $isMembership ? '' : _checkout_generate_password();
                 if (!empty($_COOKIE['tc_ref'])) {
                     $r = $pdo->prepare("SELECT id FROM users WHERE ref_code = ?");
                     $r->execute([preg_replace('/[^a-zA-Z0-9_\-]/', '', $_COOKIE['tc_ref'])]);
                     $referredBy = $r->fetchColumn() ?: null;
                 }
 
-                $pdo->prepare("INSERT INTO users (name,email,password,wa,role,status,ref_code,referred_by,created_at)
-                               VALUES (?,?,?,?,?,?,?,?,NOW())")
-                    ->execute([
-                        $buyerName,
-                        $buyerEmail,
-                        password_hash($generatedPassword, PASSWORD_DEFAULT),
-                        $normalizedWa,
-                        'member',
-                        'active',
-                        $refCodeUser,
-                        $referredBy,
-                    ]);
+                if ($isMembership) {
+                    $pdo->prepare("INSERT INTO users (name,email,password,wa,role,status,member_status,approved_at,ref_code,referred_by,created_at)
+                                   VALUES (?,?,?,?,?, 'inactive', 'pending', NULL, ?, ?, NOW())")
+                        ->execute([
+                            $buyerName,
+                            $buyerEmail,
+                            null,
+                            $normalizedWa,
+                            'member',
+                            $refCodeUser,
+                            $referredBy,
+                        ]);
+                } else {
+                    $pdo->prepare("INSERT INTO users (name,email,password,wa,role,status,member_status,approved_at,ref_code,referred_by,created_at)
+                                   VALUES (?,?,?,?,?, 'active', 'approved', NOW(), ?, ?, NOW())")
+                        ->execute([
+                            $buyerName,
+                            $buyerEmail,
+                            password_hash($generatedPassword, PASSWORD_DEFAULT),
+                            $normalizedWa,
+                            'member',
+                            $refCodeUser,
+                            $referredBy,
+                        ]);
+                }
 
                 $u = [
                     'id' => (int)$pdo->lastInsertId(),
@@ -278,7 +292,8 @@ function checkout_process() {
                     'email' => $buyerEmail,
                     'wa' => $normalizedWa,
                     'role' => 'member',
-                    'status' => 'active',
+                    'status' => $isMembership ? 'inactive' : 'active',
+                    'member_status' => $isMembership ? 'pending' : 'approved',
                     'ref_code' => $refCodeUser,
                     'referred_by' => $referredBy,
                 ];
@@ -314,11 +329,11 @@ function checkout_process() {
         return;
     }
 
-    if (!$isLoggedIn) {
+    if (!$isLoggedIn && !$isMembership) {
         _checkout_assign_login($u);
     }
 
-    if ($accountCreated) {
+    if ($accountCreated && !$isMembership) {
         log_activity('register_checkout', 'User baru dari checkout: ' . $u['email']);
         $loginLink = login_member_url();
         fonnte_send($u['wa'], wa_template('checkout_access', [
