@@ -87,11 +87,11 @@ function _duitku_is_ready() {
     return $cfg['merchant_code'] !== '' && $cfg['api_key'] !== '';
 }
 
-function _duitku_inquiry_url() {
+function _duitku_create_invoice_url() {
     $cfg = _duitku_config();
     return $cfg['sandbox']
-        ? 'https://sandbox.duitku.com/webapi/api/merchant/v2/inquiry'
-        : 'https://passport.duitku.com/webapi/api/merchant/v2/inquiry';
+        ? 'https://api-sandbox.duitku.com/api/merchant/createInvoice'
+        : 'https://api-prod.duitku.com/api/merchant/createInvoice';
 }
 
 function _duitku_create_payment(array $transaction, array $user, array $product) {
@@ -113,6 +113,8 @@ function _duitku_create_payment(array $transaction, array $user, array $product)
     $email = trim((string)($user['email'] ?? ''));
     $callbackUrl = url('checkout-duitku-callback');
     $returnUrl = url('checkout-result', ['code' => $orderId]);
+    $timestamp = (string)round(microtime(true) * 1000);
+    $signature = hash_hmac('sha256', $merchantCode . $timestamp, $apiKey);
 
     $address = [
         'firstName' => $firstName,
@@ -124,9 +126,7 @@ function _duitku_create_payment(array $transaction, array $user, array $product)
         'countryCode' => 'ID',
     ];
     $payload = [
-        'merchantCode' => $merchantCode,
         'paymentAmount' => $amount,
-        'paymentMethod' => '',
         'merchantOrderId' => $orderId,
         'productDetails' => (string)($product['title'] ?? 'Pembelian produk'),
         'additionalParam' => (string)($product['slug'] ?? ''),
@@ -149,11 +149,15 @@ function _duitku_create_payment(array $transaction, array $user, array $product)
         ],
         'callbackUrl' => $callbackUrl,
         'returnUrl' => $returnUrl,
-        'signature' => md5($merchantCode . $orderId . $amount . $apiKey),
         'expiryPeriod' => $cfg['expiry_period'],
+        'paymentMethod' => '',
     ];
 
-    $result = http_post_json(_duitku_inquiry_url(), $payload);
+    $result = http_post_json(_duitku_create_invoice_url(), $payload, [
+        'x-duitku-signature: ' . $signature,
+        'x-duitku-timestamp: ' . $timestamp,
+        'x-duitku-merchantcode: ' . $merchantCode,
+    ]);
     if (!$result['ok'] || empty($result['body']['paymentUrl'])) {
         $message = 'Gagal membuat invoice Duitku.';
         if (!empty($result['body']['Message'])) $message .= ' ' . $result['body']['Message'];
