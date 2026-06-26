@@ -1,31 +1,35 @@
 <?php
 /** admin/views/members.php */
 $q = trim($_GET['q'] ?? '');
+$showDeleted = ($_GET['deleted'] ?? '') === '1';
+$whereDeleted = $showDeleted ? "deleted_at IS NOT NULL" : "deleted_at IS NULL";
 if ($q !== '') {
     $st = db()->prepare("SELECT * FROM users
-                         WHERE role='member' AND deleted_at IS NULL
+                         WHERE role='member' AND {$whereDeleted}
                            AND (name LIKE ? OR email LIKE ? OR wa LIKE ?)
                          ORDER BY id DESC LIMIT 300");
     $like = '%' . $q . '%';
     $st->execute([$like, $like, $like]);
     $rows = $st->fetchAll();
 } else {
-    $rows = db()->query("SELECT * FROM users WHERE role='member' AND deleted_at IS NULL ORDER BY id DESC LIMIT 300")->fetchAll();
+    $rows = db()->query("SELECT * FROM users WHERE role='member' AND {$whereDeleted} ORDER BY id DESC LIMIT 300")->fetchAll();
 }
 ?>
 <div class="page-title"><h1>Member</h1><p class="muted">Daftar member terdaftar.</p></div>
 
 <form method="get" class="search-bar">
   <input type="hidden" name="p" value="members">
+  <?php if ($showDeleted): ?><input type="hidden" name="deleted" value="1"><?php endif; ?>
   <input type="text" name="q" value="<?= e($q) ?>" placeholder="Cari nama, email, atau WhatsApp...">
   <button class="btn btn-ghost">Cari</button>
+  <a class="btn btn-ghost" href="<?= e(admin_url('members', ['deleted' => $showDeleted ? '0' : '1'])) ?>"><?= e($showDeleted ? 'Tampilkan Aktif' : 'Tampilkan Terhapus') ?></a>
 </form>
 
 <?php if (!$rows): ?>
   <div class="empty"><div class="empty-ic">👥</div><h3>Belum ada member</h3><p>Member yang mendaftar akan tampil di sini.</p></div>
 <?php else: ?>
   <div class="table-wrap"><table class="table">
-    <thead><tr><th>Nama</th><th>Email</th><th>WhatsApp</th><th>Status</th><th>Daftar</th><th>Aksi</th></tr></thead>
+    <thead><tr><th>Nama</th><th>Email</th><th>WhatsApp</th><th>Status</th><th>Daftar</th><th><?= e($showDeleted ? 'Terhapus' : 'Aksi') ?></th></tr></thead>
     <tbody>
     <?php foreach ($rows as $r): ?>
       <?php
@@ -40,26 +44,38 @@ if ($q !== '') {
         <td><span class="badge badge-<?= e($ms) ?>"><?= e($ms) ?></span></td>
         <td><?= e(date('d/m/Y', strtotime($r['created_at']))) ?></td>
         <td>
-          <div class="actions">
-            <form method="post" style="display:inline">
-              <?= csrf_field() ?>
-              <input type="hidden" name="action" value="approve_member">
-              <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
-              <button class="btn btn-primary btn-sm">Approve</button>
-            </form>
-            <form method="post" style="display:inline">
-              <?= csrf_field() ?>
-              <input type="hidden" name="action" value="reject_member">
-              <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
-              <button class="btn btn-ghost btn-sm">Reject</button>
-            </form>
-            <form method="post" style="display:inline" onsubmit="return confirm('Hapus member ini?');">
-              <?= csrf_field() ?>
-              <input type="hidden" name="action" value="delete_member">
-              <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
-              <button class="btn btn-danger btn-sm">Delete</button>
-            </form>
-          </div>
+          <?php if ($showDeleted): ?>
+            <div class="actions">
+              <span class="muted"><?= e($r['deleted_at'] ? date('d/m/Y H:i', strtotime($r['deleted_at'])) : '-') ?></span>
+              <form method="post" style="display:inline" onsubmit="return confirm('Restore member ini?');">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="restore_member">
+                <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+                <button class="btn btn-primary btn-sm">Restore</button>
+              </form>
+            </div>
+          <?php else: ?>
+            <div class="actions">
+              <form method="post" style="display:inline">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="approve_member">
+                <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+                <button class="btn btn-primary btn-sm">Approve</button>
+              </form>
+              <form method="post" style="display:inline">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="reject_member">
+                <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+                <button class="btn btn-ghost btn-sm">Reject</button>
+              </form>
+              <form method="post" style="display:inline" onsubmit="return confirm('Hapus member ini?');">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="delete_member">
+                <input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
+                <button class="btn btn-danger btn-sm">Delete</button>
+              </form>
+            </div>
+          <?php endif; ?>
         </td>
       </tr>
     <?php endforeach; ?>

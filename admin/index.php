@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect(admin_url('transactions'));
     }
 
-    if ($act === 'approve_member' || $act === 'reject_member' || $act === 'delete_member') {
+    if ($act === 'approve_member' || $act === 'reject_member' || $act === 'delete_member' || $act === 'restore_member') {
         $id = (int)($_POST['id'] ?? 0);
         if ($id <= 0) {
             flash('error', 'Member tidak valid.');
@@ -129,10 +129,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo = db();
         try {
             $pdo->beginTransaction();
-            $memberSt = $pdo->prepare("SELECT * FROM users WHERE id = ? AND role = 'member' AND deleted_at IS NULL LIMIT 1 FOR UPDATE");
+            $memberSt = $pdo->prepare("SELECT * FROM users WHERE id = ? AND role = 'member' LIMIT 1 FOR UPDATE");
             $memberSt->execute([$id]);
             $member = $memberSt->fetch();
             if (!$member) throw new RuntimeException('Member tidak ditemukan.');
+
+            if ($act === 'restore_member') {
+                if (empty($member['deleted_at'])) {
+                    $pdo->commit();
+                    flash('success', 'Member sudah aktif (tidak dalam status terhapus).');
+                    redirect(admin_url('members'));
+                }
+                $pdo->prepare("UPDATE users
+                               SET deleted_at = NULL, member_status = 'pending', status = 'inactive',
+                                   password = NULL, approved_at = NULL
+                               WHERE id = ? AND role = 'member'")->execute([$id]);
+                $pdo->prepare("DELETE FROM login_otps WHERE user_id = ?")->execute([$id]);
+                $pdo->prepare("DELETE FROM password_resets WHERE user_id = ?")->execute([$id]);
+                $pdo->commit();
+                log_activity('restore_member', 'member_id=' . $id . '; email=' . ($member['email'] ?? ''));
+                flash('success', 'Member berhasil direstore. Status kembali pending dan menunggu approve.');
+                redirect(admin_url('members'));
+            }
 
             if ($act === 'approve_member') {
                 if (($member['member_status'] ?? '') === 'approved' && ($member['status'] ?? '') === 'active') {
@@ -185,7 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $pdo->prepare("UPDATE users
                            SET deleted_at = NOW(), member_status = 'rejected', status = 'inactive',
-                               password = NULL, wa = NULL
+                               password = NULL
                            WHERE id = ? AND role = 'member'")->execute([$id]);
             $pdo->prepare("DELETE FROM login_otps WHERE user_id = ?")->execute([$id]);
             $pdo->prepare("DELETE FROM password_resets WHERE user_id = ?")->execute([$id]);
