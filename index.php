@@ -48,6 +48,8 @@ switch ($p) {
     // Checkout
     case 'checkout':    checkout_show(); break;
     case 'checkout-process': checkout_process(); break;
+    case 'checkout-result': checkout_result(); break;
+    case 'checkout-duitku-callback': checkout_duitku_callback(); break;
     case 'ticket':      member_ticket_view(); break;
     case 'ticket-verify': member_ticket_verify(); break;
 

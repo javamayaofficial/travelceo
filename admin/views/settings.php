@@ -70,7 +70,7 @@ $legacyBanks = [
 
   <div class="card admin-card">
     <h2>Payment Gateway</h2>
-    <p class="muted">Centang gateway yang ingin dimunculkan di checkout. Bagian ini untuk tampilan opsi, integrasi API bisa disambungkan pada tahap berikutnya.</p>
+    <p class="muted">Centang gateway yang ingin dimunculkan di checkout. Duitku sudah bisa dipakai langsung jika kredensialnya diisi.</p>
     <div class="form-row">
       <label class="check"><input type="checkbox" name="checkout_gateway_xendit" value="1" <?= setting('checkout_gateway_xendit', '0') === '1' ? 'checked' : '' ?>> Tampilkan Xendit</label>
       <label class="check"><input type="checkbox" name="checkout_gateway_duitku" value="1" <?= setting('checkout_gateway_duitku', '0') === '1' ? 'checked' : '' ?>> Tampilkan Duitku</label>
@@ -78,6 +78,14 @@ $legacyBanks = [
     <div class="form-row">
       <label class="check"><input type="checkbox" name="checkout_gateway_midtrans" value="1" <?= setting('checkout_gateway_midtrans', '0') === '1' ? 'checked' : '' ?>> Tampilkan Midtrans</label>
       <label class="check"><input type="checkbox" name="checkout_gateway_tripay" value="1" <?= setting('checkout_gateway_tripay', '0') === '1' ? 'checked' : '' ?>> Tampilkan Tripay</label>
+    </div>
+    <div class="form-row">
+      <label class="field"><span>Duitku Merchant Code</span><input type="text" name="duitku_merchant_code" value="<?= s('duitku_merchant_code') ?>" placeholder="DXXXX"></label>
+      <label class="field"><span>Duitku API Key</span><input type="text" name="duitku_api_key" value="<?= s('duitku_api_key') ?>" placeholder="Masukkan API Key Duitku"></label>
+    </div>
+    <div class="form-row">
+      <label class="check"><input type="checkbox" name="duitku_sandbox" value="1" <?= setting('duitku_sandbox', '1') === '1' ? 'checked' : '' ?>> Gunakan Sandbox Duitku</label>
+      <label class="field"><span>Expiry Duitku (menit)</span><input type="number" name="duitku_expiry_period" value="<?= s('duitku_expiry_period', '60') ?>" min="5" max="1440"></label>
     </div>
   </div>
 

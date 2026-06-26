@@ -45,10 +45,20 @@ function _checkout_payment_config() {
         ];
     }
 
+    if (setting('checkout_gateway_duitku', '0') === '1') {
+        $methods[] = [
+            'key' => 'duitku',
+            'label' => 'Duitku',
+            'detail' => 'Lanjutkan pembayaran otomatis melalui payment gateway Duitku.',
+            'type' => 'gateway',
+            'gateway' => 'duitku',
+            'is_ready' => _duitku_is_ready(),
+        ];
+    }
+
     $gateways = [];
     foreach ([
         'xendit' => 'Xendit',
-        'duitku' => 'Duitku',
         'midtrans' => 'Midtrans',
         'tripay' => 'Tripay',
     ] as $key => $label) {
@@ -60,6 +70,101 @@ function _checkout_payment_config() {
     return [
         'methods' => $methods,
         'gateways' => $gateways,
+    ];
+}
+
+function _duitku_config() {
+    return [
+        'merchant_code' => trim((string)setting('duitku_merchant_code', '')),
+        'api_key' => trim((string)setting('duitku_api_key', '')),
+        'sandbox' => setting('duitku_sandbox', '1') === '1',
+        'expiry_period' => max(5, (int)setting('duitku_expiry_period', '60')),
+    ];
+}
+
+function _duitku_is_ready() {
+    $cfg = _duitku_config();
+    return $cfg['merchant_code'] !== '' && $cfg['api_key'] !== '';
+}
+
+function _duitku_inquiry_url() {
+    $cfg = _duitku_config();
+    return $cfg['sandbox']
+        ? 'https://sandbox.duitku.com/webapi/api/merchant/v2/inquiry'
+        : 'https://passport.duitku.com/webapi/api/merchant/v2/inquiry';
+}
+
+function _duitku_create_payment(array $transaction, array $user, array $product) {
+    $cfg = _duitku_config();
+    if (!$cfg['merchant_code'] || !$cfg['api_key']) {
+        throw new RuntimeException('Konfigurasi Duitku belum lengkap. Silakan isi Merchant Code dan API Key di pengaturan admin.');
+    }
+
+    $amount = (int)($transaction['total'] ?? 0);
+    $orderId = (string)($transaction['code'] ?? '');
+    $merchantCode = (string)$cfg['merchant_code'];
+    $apiKey = (string)$cfg['api_key'];
+    $fullName = trim((string)($user['name'] ?? 'Pelanggan'));
+    $nameParts = preg_split('/\s+/', $fullName) ?: [];
+    $firstName = $nameParts[0] ?? 'Pelanggan';
+    $lastName = trim(implode(' ', array_slice($nameParts, 1)));
+    if ($lastName === '') $lastName = '-';
+    $phone = trim((string)($user['wa'] ?? ''));
+    $email = trim((string)($user['email'] ?? ''));
+    $callbackUrl = url('checkout-duitku-callback');
+    $returnUrl = url('checkout-result', ['code' => $orderId]);
+
+    $address = [
+        'firstName' => $firstName,
+        'lastName' => $lastName,
+        'address' => trim((string)setting('site_address', 'Indonesia')),
+        'city' => 'Jakarta',
+        'postalCode' => '10110',
+        'phone' => $phone,
+        'countryCode' => 'ID',
+    ];
+    $payload = [
+        'merchantCode' => $merchantCode,
+        'paymentAmount' => $amount,
+        'paymentMethod' => '',
+        'merchantOrderId' => $orderId,
+        'productDetails' => (string)($product['title'] ?? 'Pembelian produk'),
+        'additionalParam' => (string)($product['slug'] ?? ''),
+        'merchantUserInfo' => (string)($transaction['user_id'] ?? ''),
+        'customerVaName' => $fullName,
+        'email' => $email,
+        'phoneNumber' => $phone,
+        'itemDetails' => [[
+            'name' => (string)($product['title'] ?? 'Produk'),
+            'price' => $amount,
+            'quantity' => 1,
+        ]],
+        'customerDetail' => [
+            'firstName' => $firstName,
+            'lastName' => $lastName,
+            'email' => $email,
+            'phoneNumber' => $phone,
+            'billingAddress' => $address,
+            'shippingAddress' => $address,
+        ],
+        'callbackUrl' => $callbackUrl,
+        'returnUrl' => $returnUrl,
+        'signature' => md5($merchantCode . $orderId . $amount . $apiKey),
+        'expiryPeriod' => $cfg['expiry_period'],
+    ];
+
+    $result = http_post_json(_duitku_inquiry_url(), $payload);
+    if (!$result['ok'] || empty($result['body']['paymentUrl'])) {
+        $message = 'Gagal membuat invoice Duitku.';
+        if (!empty($result['body']['Message'])) $message .= ' ' . $result['body']['Message'];
+        elseif (!empty($result['error'])) $message .= ' ' . $result['error'];
+        throw new RuntimeException(trim($message));
+    }
+
+    return [
+        'payment_url' => (string)($result['body']['paymentUrl'] ?? ''),
+        'reference' => (string)($result['body']['reference'] ?? ''),
+        'payload' => $result['body'],
     ];
 }
 
@@ -154,6 +259,157 @@ function checkout_show() {
     _checkout_render($product, [], [], $buyer);
 }
 
+function checkout_result() {
+    $code = trim((string)($_GET['code'] ?? ''));
+    if ($code === '') { flash('error', 'Kode transaksi tidak valid.'); redirect(url('products')); }
+
+    $st = db()->prepare("SELECT t.*, p.title AS product_title, p.slug AS product_slug, p.type AS product_type
+                         FROM transactions t
+                         JOIN products p ON p.id = t.product_id
+                         WHERE t.code = ?
+                         LIMIT 1");
+    $st->execute([$code]);
+    $tx = $st->fetch();
+    if (!$tx) { flash('error', 'Transaksi tidak ditemukan.'); redirect(url('products')); }
+
+    $paymentMethod = null;
+    $paymentConfig = _checkout_payment_config();
+    foreach ($paymentConfig['methods'] as $method) {
+        if (($method['label'] ?? '') === ($tx['bank'] ?? '') || ($method['key'] ?? '') === ($tx['payment_provider'] ?? '')) {
+            $paymentMethod = $method;
+            break;
+        }
+    }
+    if (!$paymentMethod && ($tx['payment_provider'] ?? '') === 'duitku') {
+        $paymentMethod = [
+            'type' => 'gateway',
+            'gateway' => 'duitku',
+            'label' => 'Duitku',
+            'detail' => 'Pembayaran diproses melalui Duitku.',
+        ];
+    }
+
+    view('layout', [
+        'title' => 'Status Pesanan',
+        'content' => 'checkout_success',
+        'vars' => [
+            'code' => $tx['code'],
+            'product' => ['title' => $tx['product_title'], 'slug' => $tx['product_slug'], 'type' => $tx['product_type']],
+            'total' => (int)$tx['total'],
+            'account_created' => false,
+            'payment_method' => $paymentMethod,
+            'payment_status' => (string)($tx['status'] ?? 'pending'),
+            'payment_url' => (string)($tx['payment_url'] ?? ''),
+        ],
+    ]);
+}
+
+function checkout_duitku_callback() {
+    $merchantOrderId = trim((string)($_POST['merchantOrderId'] ?? $_POST['merchant_order_id'] ?? ''));
+    if ($merchantOrderId === '') {
+        http_response_code(400);
+        echo 'INVALID';
+        return;
+    }
+
+    $pdo = db();
+    $notifyApproved = false;
+    $notifyRejected = false;
+    $txForNotify = null;
+    try {
+        $pdo->beginTransaction();
+        $st = $pdo->prepare("SELECT t.*, p.title AS ptitle, p.type AS ptype, u.name AS uname, u.wa AS uwa, u.email AS uemail
+                             FROM transactions t
+                             JOIN products p ON p.id = t.product_id
+                             JOIN users u ON u.id = t.user_id
+                             WHERE t.code = ?
+                             LIMIT 1
+                             FOR UPDATE");
+        $st->execute([$merchantOrderId]);
+        $t = $st->fetch();
+        if (!$t) throw new RuntimeException('Transaksi tidak ditemukan.');
+
+        $payload = json_encode($_POST);
+        $resultCode = strtoupper(trim((string)($_POST['resultCode'] ?? $_POST['result_code'] ?? '')));
+        $reference = trim((string)($_POST['reference'] ?? ''));
+        $status = ($resultCode === '00') ? 'approved' : (($resultCode === '01') ? 'pending' : 'rejected');
+
+        $pdo->prepare("UPDATE transactions
+                       SET payment_provider = 'duitku',
+                           payment_reference = ?,
+                           payment_payload = ?,
+                           payment_url = COALESCE(payment_url, ?)
+                       WHERE id = ?")
+            ->execute([$reference ?: null, $payload ?: null, $t['payment_url'] ?? null, $t['id']]);
+
+        if ($status === 'approved' && $t['status'] === 'pending') {
+            if (ticket_is_eligible($t['ptype'] ?? '', $t['ptitle'] ?? '')) {
+                $productLock = $pdo->prepare("SELECT seat_quota FROM products WHERE id = ? LIMIT 1 FOR UPDATE");
+                $productLock->execute([(int)$t['product_id']]);
+                $seatQuota = (int)$productLock->fetchColumn();
+                $approvedCount = 0;
+                if ($seatQuota > 0) {
+                    $approvedSt = $pdo->prepare("SELECT COUNT(*) FROM transactions WHERE product_id = ? AND status = 'approved'");
+                    $approvedSt->execute([(int)$t['product_id']]);
+                    $approvedCount = (int)$approvedSt->fetchColumn();
+                }
+                if ($seatQuota > 0 && $approvedCount >= $seatQuota) {
+                    throw new RuntimeException('Kuota peserta sudah penuh.');
+                }
+            }
+
+            $pdo->prepare("UPDATE transactions
+                           SET status = 'approved', approved_at = NOW(), paid_at = NOW()
+                           WHERE id = ? AND status = 'pending'")->execute([$t['id']]);
+            $pdo->prepare("INSERT IGNORE INTO enrollments (user_id,product_id,created_at) VALUES (?,?,NOW())")
+                ->execute([$t['user_id'], $t['product_id']]);
+            $pdo->prepare("UPDATE users SET status = 'active' WHERE id = ?")->execute([$t['user_id']]);
+            $notifyApproved = true;
+        } elseif ($status === 'rejected' && $t['status'] === 'pending') {
+            $pdo->prepare("UPDATE transactions SET status = 'rejected' WHERE id = ? AND status = 'pending'")->execute([$t['id']]);
+            $notifyRejected = true;
+        }
+
+        $pdo->commit();
+        $txForNotify = $t;
+        if ($notifyApproved) {
+            fonnte_send($t['uwa'], wa_template('approved', ['nama' => $t['uname'], 'produk' => $t['ptitle']]));
+            $mail = mail_template('approved', ['nama' => $t['uname'], 'produk' => $t['ptitle']]);
+            mailketing_send($t['uemail'] ?? '', $mail['subject'], $mail['html']);
+            $ticket = ticket_issue_for_transaction($t);
+            if ($ticket) {
+                $ticketLink = ticket_url($ticket['ticket_token']);
+                fonnte_send($t['uwa'], wa_template('ticket_ready', [
+                    'nama' => $t['uname'],
+                    'produk' => $t['ptitle'],
+                    'ticket' => $ticket['ticket_code'],
+                    'link' => $ticketLink,
+                ]));
+                $ticketMail = mail_template('ticket_ready', [
+                    'nama' => $t['uname'],
+                    'produk' => $t['ptitle'],
+                    'ticket' => $ticket['ticket_code'],
+                    'link' => $ticketLink,
+                ]);
+                mailketing_send($t['uemail'] ?? '', $ticketMail['subject'], $ticketMail['html']);
+            }
+            log_activity('duitku_callback_approved', $merchantOrderId);
+        } elseif ($notifyRejected) {
+            fonnte_send($t['uwa'], wa_template('rejected', ['nama' => $t['uname'], 'produk' => $t['ptitle']]));
+            $mail = mail_template('rejected', ['nama' => $t['uname'], 'produk' => $t['ptitle']]);
+            mailketing_send($t['uemail'] ?? '', $mail['subject'], $mail['html']);
+            log_activity('duitku_callback_rejected', $merchantOrderId);
+        }
+        http_response_code(200);
+        echo 'OK';
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        log_activity('duitku_callback_error', $e->getMessage());
+        http_response_code(500);
+        echo 'ERROR';
+    }
+}
+
 function checkout_process() {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') redirect(url('products'));
     check_csrf();
@@ -184,6 +440,7 @@ function checkout_process() {
     if (!empty($seatStats['is_full'])) $errors[] = 'Maaf, kuota peserta untuk program ini sudah penuh.';
     if (!$methodMap) $errors[] = 'Metode pembayaran belum diatur admin.';
     if ($bank === '' || !isset($methodMap[$bank])) $errors[] = 'Pilih metode pembayaran.';
+    if ($bank === 'duitku' && !_duitku_is_ready()) $errors[] = 'Payment gateway Duitku belum siap digunakan. Silakan hubungi admin.';
 
     if (!$u) {
         $buyerName = trim($_POST['buyer_name'] ?? '');
@@ -307,14 +564,18 @@ function checkout_process() {
             $ref = $r->fetchColumn() ?: $ref;
         }
 
+        $paymentProvider = $bank === 'duitku' ? 'duitku' : null;
+        $paymentLabel = $paymentProvider ? 'Duitku' : $methodMap[$bank]['label'];
         $ins = $pdo->prepare("INSERT INTO transactions
-            (code,user_id,product_id,bank,amount,coupon_code,discount,total,proof,note,ref_code,status,created_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?, 'pending', NOW())");
+            (code,user_id,product_id,bank,payment_provider,amount,coupon_code,discount,total,proof,note,ref_code,status,created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'pending', NOW())");
         $ins->execute([
-            $code, $u['id'], $product['id'], $methodMap[$bank]['label'], $product['price'],
+            $code, $u['id'], $product['id'], $paymentLabel, $paymentProvider, $product['price'],
             $coupon ? $coupon['code'] : null, $discount, $total,
             $proofFile, $note, $ref
         ]);
+
+        $transactionId = (int)$pdo->lastInsertId();
 
         if ($coupon) {
             $pdo->prepare("UPDATE coupons SET used_count = used_count + 1 WHERE id = ?")->execute([$coupon['id']]);
@@ -325,6 +586,33 @@ function checkout_process() {
         if ($pdo->inTransaction()) $pdo->rollBack();
         _checkout_render($product, [$e->getMessage()], $old, $u);
         return;
+    }
+
+    if (($selectedMethod['gateway'] ?? '') === 'duitku') {
+        try {
+            $transaction = [
+                'id' => $transactionId,
+                'code' => $code,
+                'user_id' => $u['id'],
+                'total' => $total,
+            ];
+            $duitku = _duitku_create_payment($transaction, $u, $product);
+            db()->prepare("UPDATE transactions
+                           SET payment_reference = ?, payment_url = ?, payment_payload = ?
+                           WHERE id = ?")
+                ->execute([
+                    $duitku['reference'] ?: null,
+                    $duitku['payment_url'],
+                    json_encode($duitku['payload']),
+                    $transactionId,
+                ]);
+            redirect($duitku['payment_url']);
+        } catch (Exception $e) {
+            db()->prepare("UPDATE transactions SET payment_payload = ? WHERE id = ?")
+                ->execute([json_encode(['error' => $e->getMessage()]), $transactionId]);
+            _checkout_render($product, [$e->getMessage()], $old, $u);
+            return;
+        }
     }
 
     log_activity('checkout', "Order $code untuk {$product['title']}");
@@ -382,11 +670,14 @@ function checkout_process() {
             'product' => $product,
             'total' => $total,
             'account_created' => $accountCreated,
+            'payment_status' => 'pending',
+            'payment_url' => '',
             'payment_method' => $selectedMethod ? [
                 'type' => (string)($selectedMethod['type'] ?? ''),
                 'label' => (string)($selectedMethod['label'] ?? ''),
                 'detail' => (string)($selectedMethod['detail'] ?? ''),
                 'image' => (string)($selectedMethod['image'] ?? ''),
+                'gateway' => (string)($selectedMethod['gateway'] ?? ''),
             ] : null,
         ],
     ]);

@@ -627,11 +627,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   'seo_title','seo_desc','wa_register','wa_purchase','wa_approved','wa_rejected',
                   'home_link_apply','home_link_programs','home_link_consult','home_link_products_more',
                   'home_link_blog_more','home_link_featured_sales','home_link_final_apply','home_link_final_register',
-                  'checkout_qris_label','checkout_qris_note'] as $k) {
+                  'checkout_qris_label','checkout_qris_note',
+                  'duitku_merchant_code','duitku_api_key','duitku_expiry_period'] as $k) {
             if (array_key_exists($k, $_POST)) set_setting($k, trim($_POST[$k]));
         }
         foreach ([
             'checkout_qris_enabled',
+            'duitku_sandbox',
             'checkout_gateway_xendit','checkout_gateway_duitku','checkout_gateway_midtrans','checkout_gateway_tripay',
             'checkout_bank_1_enabled','checkout_bank_2_enabled','checkout_bank_3_enabled',
             'checkout_bank_4_enabled','checkout_bank_5_enabled','checkout_bank_6_enabled',

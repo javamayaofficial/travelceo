@@ -36,7 +36,7 @@ $seatStats = $seat_stats ?? ['quota' => 0, 'approved' => 0, 'remaining' => null,
     <?php else: ?>
       <div class="checkout-intro">
         <strong>Data pembeli</strong>
-        <p class="muted">Isi data sekali di sini. Sistem akan membuat akun member otomatis dengan password random dan mengirim data akses ke WhatsApp serta email Anda.</p>
+        <p class="muted">Isi data pembeli sekali di sini. Untuk produk membership, akses login baru dikirim setelah pembelian disetujui admin.</p>
       </div>
 
       <label class="field">
@@ -52,7 +52,7 @@ $seatStats = $seat_stats ?? ['quota' => 0, 'approved' => 0, 'remaining' => null,
       <label class="field">
         <span>Nomor WhatsApp</span>
         <input type="tel" name="buyer_wa" value="<?= e($old['buyer_wa'] ?? '') ?>" placeholder="08xxxxxxxxxx" autocomplete="tel" required>
-        <small class="hint">Notifikasi pesanan dan data akses akun akan dikirim ke nomor ini.</small>
+        <small class="hint">Notifikasi pesanan dan pembaruan status akan dikirim ke nomor ini.</small>
       </label>
     <?php endif; ?>
 
@@ -75,7 +75,10 @@ $seatStats = $seat_stats ?? ['quota' => 0, 'approved' => 0, 'remaining' => null,
               <strong><?= e($method['label']) ?></strong>
               <small class="muted"><?= e($method['detail']) ?></small>
               <?php if (($method['type'] ?? '') === 'qris' && !empty($method['image'])): ?>
-                <img class="qris-thumb" src="<?= e(base_url($method['image'])) ?>" alt="<?= e($method['label']) ?>">
+                <img class="qris-thumb" src="<?= e(public_asset_url($method['image'])) ?>" alt="<?= e($method['label']) ?>">
+              <?php endif; ?>
+              <?php if (($method['type'] ?? '') === 'gateway' && (($method['gateway'] ?? '') === 'duitku') && empty($method['is_ready'])): ?>
+                <small class="muted">Konfigurasi Duitku belum lengkap di admin.</small>
               <?php endif; ?>
             </span>
           </label>
@@ -106,7 +109,7 @@ $seatStats = $seat_stats ?? ['quota' => 0, 'approved' => 0, 'remaining' => null,
       <p class="hint center">Kuota workshop ini sudah penuh. Silakan hubungi admin jika ingin masuk waiting list.</p>
     <?php else: ?>
       <button type="submit" class="btn btn-gold btn-lg btn-block">Kirim &amp; Konfirmasi Pesanan</button>
-      <p class="hint center">Setelah dikirim, pesanan masuk ke admin dan data akses akun langsung dikirim ke WhatsApp serta email Anda.</p>
+      <p class="hint center">Setelah dikirim, pesanan akan diproses sesuai metode pembayaran yang Anda pilih.</p>
     <?php endif; ?>
   </form>
 </section>

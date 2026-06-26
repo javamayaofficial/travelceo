@@ -59,6 +59,13 @@ function base_url($path = '') {
     return rtrim($b, '/') . '/' . ltrim($path, '/');
 }
 
+function public_asset_url($path = '') {
+    $path = trim((string)$path);
+    if ($path === '') return '';
+    if (preg_match('~^https?://~i', $path)) return $path;
+    return base_url(ltrim($path, '/'));
+}
+
 function url($page, $params = []) {
     $q = array_merge(['p' => $page], $params);
     return base_url('index.php') . '?' . http_build_query($q);
@@ -431,6 +438,17 @@ function ensure_runtime_schema() {
             $hasColumn = db()->query("SHOW COLUMNS FROM `products` LIKE " . db()->quote($column))->fetch();
             if (!$hasColumn) db()->exec($sql);
         }
+        $transactionColumns = [
+            'payment_provider' => "ALTER TABLE `transactions` ADD COLUMN `payment_provider` VARCHAR(40) NULL AFTER `bank`",
+            'payment_reference' => "ALTER TABLE `transactions` ADD COLUMN `payment_reference` VARCHAR(120) NULL AFTER `payment_provider`",
+            'payment_url' => "ALTER TABLE `transactions` ADD COLUMN `payment_url` VARCHAR(255) NULL AFTER `payment_reference`",
+            'payment_payload' => "ALTER TABLE `transactions` ADD COLUMN `payment_payload` MEDIUMTEXT NULL AFTER `payment_url`",
+            'paid_at' => "ALTER TABLE `transactions` ADD COLUMN `paid_at` DATETIME NULL AFTER `approved_at`",
+        ];
+        foreach ($transactionColumns as $column => $sql) {
+            $hasColumn = db()->query("SHOW COLUMNS FROM `transactions` LIKE " . db()->quote($column))->fetch();
+            if (!$hasColumn) db()->exec($sql);
+        }
     } catch (Exception $e) {
         log_activity('schema_runtime_error', $e->getMessage());
     }
@@ -607,6 +625,42 @@ function http_get_json($url) {
     if ($err || $status < 200 || $status >= 300 || !$res) return null;
     $json = json_decode((string)$res, true);
     return is_array($json) ? $json : null;
+}
+
+function http_post_json($url, array $payload, array $headers = []) {
+    $url = trim((string)$url);
+    if ($url === '') return ['ok' => false, 'status' => 0, 'body' => null, 'raw' => '', 'error' => 'URL kosong.'];
+
+    $body = json_encode($payload);
+    if ($body === false) return ['ok' => false, 'status' => 0, 'body' => null, 'raw' => '', 'error' => 'Payload JSON tidak valid.'];
+
+    $httpHeaders = array_merge([
+        'Content-Type: application/json',
+        'Content-Length: ' . strlen($body),
+    ], $headers);
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_TIMEOUT => 30,
+        CURLOPT_POSTFIELDS => $body,
+        CURLOPT_HTTPHEADER => $httpHeaders,
+        CURLOPT_SSL_VERIFYPEER => true,
+    ]);
+    $res = curl_exec($ch);
+    $err = curl_error($ch);
+    $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    $json = json_decode((string)$res, true);
+    return [
+        'ok' => !$err && $status >= 200 && $status < 300 && is_array($json),
+        'status' => $status,
+        'body' => is_array($json) ? $json : null,
+        'raw' => (string)$res,
+        'error' => $err ?: '',
+    ];
 }
 
 function mail_template($key, $vars = []) {
