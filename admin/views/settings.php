@@ -2,6 +2,17 @@
 /** admin/views/settings.php */
 if (!function_exists("s")) { function s($k, $d=''){ return e(setting($k, $d)); } }
 $bankSuggestions = ['BCA','Mandiri','BRI','BNI','BSI','CIMB Niaga','Permata','Danamon','BTN','OCBC NISP','Maybank','SeaBank','Jago','Neo Commerce'];
+$duitkuMerchantCode = strtoupper(preg_replace('/\s+/', '', trim((string)setting('duitku_merchant_code', ''))));
+$duitkuSandbox = setting('duitku_sandbox', '1') === '1';
+$duitkuEnvironmentLabel = $duitkuSandbox ? 'Sandbox' : 'Production';
+$duitkuStatusNote = '';
+if ($duitkuMerchantCode === '') {
+  $duitkuStatusNote = 'Merchant Code Duitku belum diisi.';
+} elseif (!$duitkuSandbox && $duitkuMerchantCode !== 'D19346') {
+  $duitkuStatusNote = 'Mode Production untuk project ini wajib memakai Merchant Code D19346.';
+} elseif (!$duitkuSandbox && $duitkuMerchantCode === 'D19346') {
+  $duitkuStatusNote = 'Konfigurasi Production sudah mengarah ke Merchant Code D19346.';
+}
 $legacyBanks = [
   1 => ['name' => 'BCA', 'account' => setting('bank_bca', '')],
   2 => ['name' => 'Mandiri', 'account' => setting('bank_mandiri', '')],
@@ -71,6 +82,12 @@ $legacyBanks = [
   <div class="card admin-card">
     <h2>Payment Gateway</h2>
     <p class="muted">Centang gateway yang ingin dimunculkan di checkout. Duitku sudah bisa dipakai langsung jika kredensialnya diisi.</p>
+    <p class="hint">Mode aktif saat ini: <strong><?= e($duitkuEnvironmentLabel) ?></strong><?= $duitkuMerchantCode !== '' ? ' | Merchant: <strong>' . e($duitkuMerchantCode) . '</strong>' : '' ?></p>
+    <p class="hint">Untuk project ini, kredensial Production harus memakai Merchant Code <strong>D19346</strong> dan opsi Sandbox harus dimatikan.</p>
+    <p class="hint">Project Duitku yang masih <strong>Inactive</strong> tidak bisa dipakai membuat invoice.</p>
+    <?php if ($duitkuStatusNote !== ''): ?>
+      <p class="hint"><?= e($duitkuStatusNote) ?></p>
+    <?php endif; ?>
     <div class="form-row">
       <label class="check"><input type="checkbox" name="checkout_gateway_xendit" value="1" <?= setting('checkout_gateway_xendit', '0') === '1' ? 'checked' : '' ?>> Tampilkan Xendit</label>
       <label class="check"><input type="checkbox" name="checkout_gateway_duitku" value="1" <?= setting('checkout_gateway_duitku', '0') === '1' ? 'checked' : '' ?>> Tampilkan Duitku</label>

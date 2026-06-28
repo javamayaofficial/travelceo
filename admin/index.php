@@ -629,8 +629,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                   'home_link_apply','home_link_programs','home_link_consult','home_link_products_more',
                   'home_link_blog_more','home_link_featured_sales','home_link_final_apply','home_link_final_register',
                   'checkout_qris_label','checkout_qris_note',
-                  'duitku_merchant_code','duitku_api_key','duitku_expiry_period'] as $k) {
+                  'duitku_api_key'] as $k) {
             if (array_key_exists($k, $_POST)) set_setting($k, trim($_POST[$k]));
+        }
+        if (array_key_exists('duitku_merchant_code', $_POST)) {
+            set_setting('duitku_merchant_code', strtoupper(preg_replace('/\s+/', '', trim((string)$_POST['duitku_merchant_code']))));
+        }
+        if (array_key_exists('duitku_expiry_period', $_POST)) {
+            $expiryPeriod = max(5, min(1440, (int)$_POST['duitku_expiry_period']));
+            set_setting('duitku_expiry_period', (string)$expiryPeriod);
         }
         foreach ([
             'checkout_qris_enabled',

@@ -75,16 +75,36 @@ function _checkout_payment_config() {
 
 function _duitku_config() {
     return [
-        'merchant_code' => trim((string)setting('duitku_merchant_code', '')),
+        'merchant_code' => strtoupper(preg_replace('/\s+/', '', trim((string)setting('duitku_merchant_code', '')))),
         'api_key' => trim((string)setting('duitku_api_key', '')),
         'sandbox' => setting('duitku_sandbox', '1') === '1',
         'expiry_period' => max(5, (int)setting('duitku_expiry_period', '60')),
     ];
 }
 
+function _duitku_validate_config($cfg = null) {
+    $cfg = is_array($cfg) ? $cfg : _duitku_config();
+    $messages = [];
+    $environment = $cfg['sandbox'] ? 'Sandbox' : 'Production';
+
+    if ($cfg['merchant_code'] === '' || $cfg['api_key'] === '') {
+        $messages[] = 'Konfigurasi Duitku belum lengkap. Silakan isi Merchant Code dan API Key di pengaturan admin.';
+    }
+    if (!$cfg['sandbox'] && $cfg['merchant_code'] !== '' && $cfg['merchant_code'] !== 'D19346') {
+        $messages[] = 'Mode Production untuk project ini harus menggunakan Merchant Code D19346.';
+    }
+
+    return [
+        'ok' => !$messages,
+        'messages' => $messages,
+        'environment' => $environment,
+    ];
+}
+
 function _duitku_is_ready() {
     $cfg = _duitku_config();
-    return $cfg['merchant_code'] !== '' && $cfg['api_key'] !== '';
+    $validation = _duitku_validate_config($cfg);
+    return $validation['ok'];
 }
 
 function _duitku_create_invoice_url() {
@@ -96,8 +116,9 @@ function _duitku_create_invoice_url() {
 
 function _duitku_create_payment(array $transaction, array $user, array $product) {
     $cfg = _duitku_config();
-    if (!$cfg['merchant_code'] || !$cfg['api_key']) {
-        throw new RuntimeException('Konfigurasi Duitku belum lengkap. Silakan isi Merchant Code dan API Key di pengaturan admin.');
+    $validation = _duitku_validate_config($cfg);
+    if (!$validation['ok']) {
+        throw new RuntimeException(implode(' ', $validation['messages']));
     }
 
     $amount = (int)($transaction['total'] ?? 0);
@@ -163,6 +184,12 @@ function _duitku_create_payment(array $transaction, array $user, array $product)
         elseif (!empty($result['body']['message'])) $message .= ' ' . $result['body']['message'];
         elseif (!empty($result['raw'])) $message .= ' Respons: ' . trim((string)$result['raw']);
         elseif (!empty($result['error'])) $message .= ' ' . $result['error'];
+        if (stripos($message, 'Merchant Not Found') !== false) {
+            $message .= ' Periksa Merchant Code `' . $merchantCode . '` pada mode ' . $validation['environment'] . '.';
+            if (!$cfg['sandbox']) {
+                $message .= ' Untuk project ini gunakan Merchant Code D19346 di Production.';
+            }
+        }
         throw new RuntimeException(trim($message));
     }
 
