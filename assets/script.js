@@ -27,6 +27,32 @@
     }
   }
 
+  function ensureToastStack() {
+    var stack = document.querySelector('.copy-toast-stack');
+    if (stack) return stack;
+    stack = document.createElement('div');
+    stack.className = 'copy-toast-stack';
+    document.body.appendChild(stack);
+    return stack;
+  }
+
+  function showToast(message, type) {
+    var stack = ensureToastStack();
+    var toast = document.createElement('div');
+    toast.className = 'copy-toast ' + (type || 'ok');
+    toast.textContent = message;
+    stack.appendChild(toast);
+    window.requestAnimationFrame(function () {
+      toast.classList.add('show');
+    });
+    window.setTimeout(function () {
+      toast.classList.remove('show');
+      window.setTimeout(function () {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 180);
+    }, 1800);
+  }
+
   // Tutup sidebar admin otomatis setelah memilih menu (tampilan HP)
   var toggle = document.getElementById('navtoggle');
   if (toggle) {
@@ -75,13 +101,16 @@
 
       function markCopied() {
         button.textContent = 'Tersalin';
+        showToast('Link sudah disalin', 'ok');
         window.setTimeout(function () {
           button.textContent = originalText;
         }, 1400);
       }
 
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(copyText).then(markCopied).catch(function () {});
+        navigator.clipboard.writeText(copyText).then(markCopied).catch(function () {
+          showToast('Gagal menyalin link', 'err');
+        });
         return;
       }
 
@@ -96,7 +125,7 @@
         document.execCommand('copy');
         markCopied();
       } catch (err) {
-        // Abaikan jika browser menolak clipboard fallback.
+        showToast('Gagal menyalin link', 'err');
       }
       document.body.removeChild(temp);
     });
