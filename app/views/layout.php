@@ -9,6 +9,7 @@ $u = current_user();
 $site = setting('site_name', 'The Travel CEO');
 $pagePixel = trim((string)($vars['page_facebook_pixel'] ?? ''));
 $pixel = $pagePixel !== '' ? $pagePixel : trim((string)setting('facebook_pixel'));
+$canonicalHref = canonical_url();
 $styleFile = dirname(__DIR__, 2) . '/assets/style.css';
 $styleVer = is_file($styleFile) ? (string)filemtime($styleFile) : date('YmdHis');
 $styleHref = base_url('assets/style.css') . '?v=' . rawurlencode($styleVer);
@@ -25,6 +26,7 @@ if ($bare) $bodyClass[] = 'is-bare';
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title><?= e($title ?? $site) ?></title>
 <meta name="description" content="<?= e($metadesc ?? '') ?>">
+<link rel="canonical" href="<?= e($canonicalHref) ?>">
 <?php if ($fav = setting('favicon')): ?><link rel="icon" href="<?= e(base_url($fav)) ?>"><?php endif; ?>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

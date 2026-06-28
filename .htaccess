@@ -10,6 +10,57 @@ RewriteRule ^login-member/?$ index.php?p=login [L,QSA]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^login-panel/?$ index.php?p=login-panel [L,QSA]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^sales/([^/]+)/?$ index.php?p=sales&slug=$1 [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^products/([^/]+)/?$ index.php?p=product&slug=$1 [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^products/?$ index.php?p=products [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^checkout/([^/]+)/?$ index.php?p=checkout&slug=$1 [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^blog/([^/]+)/?$ index.php?p=post&slug=$1 [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^blog/?$ index.php?p=blog [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^access/([^/]+)/?$ index.php?p=access&slug=$1 [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^register/?$ index.php?p=register [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^logout/?$ index.php?p=logout [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^forgot/?$ index.php?p=forgot [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^reset-password/([^/]+)/?$ index.php?p=reset-password&token=$1 [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^reset-password/?$ index.php?p=reset-password [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^dashboard/?$ index.php?p=dashboard [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^affiliate/?$ index.php?p=affiliate [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^profile/?$ index.php?p=profile [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ticket/verify/([^/]+)/?$ index.php?p=ticket-verify&token=$1 [L,QSA,NC]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ticket/([^/]+)/?$ index.php?p=ticket&token=$1 [L,QSA,NC]
 
 # Lindungi file sensitif
 <FilesMatch "^(config\.php|config\.sample\.php|database\.sql)$">

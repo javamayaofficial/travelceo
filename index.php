@@ -1,8 +1,7 @@
 <?php
 /**
  * index.php — Pintu masuk utama (router) untuk halaman publik & member.
- * Routing memakai query string (?p=halaman) agar berjalan di semua
- * shared hosting tanpa perlu mod_rewrite.
+ * Mendukung URL rapi berbasis path dan tetap kompatibel dengan query string lama.
  */
 require __DIR__ . '/app/bootstrap.php';
 
@@ -18,9 +17,83 @@ if ($scriptDir !== '' && str_starts_with($requestPath, $scriptDir . '/')) {
 }
 
 $p = $_GET['p'] ?? '';
-if ($p === '' && $requestPath === 'login-member') $p = 'login';
-if ($p === '' && $requestPath === 'login-panel') $p = 'login-panel';
-if ($p === '') $p = 'home';
+if ($p === '') {
+    $segments = $requestPath === '' ? [] : explode('/', $requestPath);
+    switch ($segments[0] ?? '') {
+        case '':
+        case 'index.php':
+            $p = 'home';
+            break;
+        case 'login-member':
+            $p = 'login';
+            break;
+        case 'login-panel':
+            $p = 'login-panel';
+            break;
+        case 'sales':
+            $p = 'sales';
+            $_GET['slug'] = $_GET['slug'] ?? ($segments[1] ?? '');
+            break;
+        case 'products':
+            if (!empty($segments[1])) {
+                $p = 'product';
+                $_GET['slug'] = $_GET['slug'] ?? $segments[1];
+            } else {
+                $p = 'products';
+            }
+            break;
+        case 'checkout':
+            $p = 'checkout';
+            $_GET['slug'] = $_GET['slug'] ?? ($segments[1] ?? '');
+            break;
+        case 'blog':
+            if (!empty($segments[1])) {
+                $p = 'post';
+                $_GET['slug'] = $_GET['slug'] ?? $segments[1];
+            } else {
+                $p = 'blog';
+            }
+            break;
+        case 'access':
+            $p = 'access';
+            $_GET['slug'] = $_GET['slug'] ?? ($segments[1] ?? '');
+            break;
+        case 'register':
+            $p = 'register';
+            break;
+        case 'logout':
+            $p = 'logout';
+            break;
+        case 'forgot':
+            $p = 'forgot';
+            break;
+        case 'reset-password':
+            $p = 'reset-password';
+            $_GET['token'] = $_GET['token'] ?? ($segments[1] ?? '');
+            break;
+        case 'dashboard':
+            $p = 'dashboard';
+            break;
+        case 'affiliate':
+            $p = 'affiliate';
+            break;
+        case 'profile':
+            $p = 'profile';
+            break;
+        case 'ticket':
+            if (($segments[1] ?? '') === 'verify') {
+                $p = 'ticket-verify';
+                $_GET['token'] = $_GET['token'] ?? ($segments[2] ?? '');
+            } else {
+                $p = 'ticket';
+                $_GET['token'] = $_GET['token'] ?? ($segments[1] ?? '');
+            }
+            break;
+        default:
+            $p = '__404__';
+            break;
+    }
+}
 
 switch ($p) {
     // Publik

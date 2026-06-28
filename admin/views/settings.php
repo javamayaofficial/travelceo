@@ -143,22 +143,22 @@ $legacyBanks = [
 
   <div class="card admin-card">
     <h2>Link Tombol Homepage</h2>
-    <p class="muted">Semua CTA utama di homepage bisa diarahkan manual dari sini. Boleh isi URL penuh seperti <code>https://...</code> atau path lokal seperti <code>?p=products</code>.</p>
+    <p class="muted">Semua CTA utama di homepage bisa diarahkan manual dari sini. Boleh isi URL penuh seperti <code>https://...</code> atau path lokal seperti <code>/products</code>.</p>
     <div class="form-row">
-      <label class="field"><span>Tombol Hero Utama</span><input type="text" name="home_link_apply" value="<?= s('home_link_apply') ?>" placeholder="https://wa.me/... atau ?p=register"></label>
-      <label class="field"><span>Tombol Hero Kedua</span><input type="text" name="home_link_programs" value="<?= s('home_link_programs') ?>" placeholder="?p=products"></label>
+      <label class="field"><span>Tombol Hero Utama</span><input type="text" name="home_link_apply" value="<?= s('home_link_apply') ?>" placeholder="https://wa.me/... atau /register"></label>
+      <label class="field"><span>Tombol Hero Kedua</span><input type="text" name="home_link_programs" value="<?= s('home_link_programs') ?>" placeholder="/products"></label>
     </div>
     <div class="form-row">
       <label class="field"><span>Tombol Konsultasi Seat</span><input type="text" name="home_link_consult" value="<?= s('home_link_consult') ?>" placeholder="https://wa.me/..."></label>
-      <label class="field"><span>Link Semua Produk</span><input type="text" name="home_link_products_more" value="<?= s('home_link_products_more') ?>" placeholder="?p=products"></label>
+      <label class="field"><span>Link Semua Produk</span><input type="text" name="home_link_products_more" value="<?= s('home_link_products_more') ?>" placeholder="/products"></label>
     </div>
     <div class="form-row">
-      <label class="field"><span>Link Semua Blog</span><input type="text" name="home_link_blog_more" value="<?= s('home_link_blog_more') ?>" placeholder="?p=blog"></label>
-      <label class="field"><span>Tombol Featured Salespage</span><input type="text" name="home_link_featured_sales" value="<?= s('home_link_featured_sales') ?>" placeholder="?p=sales&amp;slug=nama-salespage"></label>
+      <label class="field"><span>Link Semua Blog</span><input type="text" name="home_link_blog_more" value="<?= s('home_link_blog_more') ?>" placeholder="/blog"></label>
+      <label class="field"><span>Tombol Featured Salespage</span><input type="text" name="home_link_featured_sales" value="<?= s('home_link_featured_sales') ?>" placeholder="/sales/nama-salespage"></label>
     </div>
     <div class="form-row">
       <label class="field"><span>Tombol CTA Bawah Utama</span><input type="text" name="home_link_final_apply" value="<?= s('home_link_final_apply') ?>" placeholder="https://wa.me/..."></label>
-      <label class="field"><span>Tombol CTA Bawah Kedua</span><input type="text" name="home_link_final_register" value="<?= s('home_link_final_register') ?>" placeholder="?p=register"></label>
+      <label class="field"><span>Tombol CTA Bawah Kedua</span><input type="text" name="home_link_final_register" value="<?= s('home_link_final_register') ?>" placeholder="/register"></label>
     </div>
   </div>
 

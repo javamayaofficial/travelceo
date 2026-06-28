@@ -66,7 +66,73 @@ function public_asset_url($path = '') {
     return base_url(ltrim($path, '/'));
 }
 
+function _url_path_join(array $segments) {
+    $segments = array_values(array_filter(array_map(static function ($segment) {
+        return trim((string)$segment, '/');
+    }, $segments), static function ($segment) {
+        return $segment !== '';
+    }));
+    return implode('/', array_map('rawurlencode', $segments));
+}
+
+function _pretty_route_path($page, array $params = []) {
+    $page = trim((string)$page);
+    switch ($page) {
+        case 'home':
+            return '';
+        case 'sales':
+            return !empty($params['slug']) ? _url_path_join(['sales', $params['slug']]) : null;
+        case 'products':
+            return 'products';
+        case 'product':
+            return !empty($params['slug']) ? _url_path_join(['products', $params['slug']]) : null;
+        case 'checkout':
+            return !empty($params['slug']) ? _url_path_join(['checkout', $params['slug']]) : null;
+        case 'blog':
+            return 'blog';
+        case 'post':
+            return !empty($params['slug']) ? _url_path_join(['blog', $params['slug']]) : null;
+        case 'access':
+            return !empty($params['slug']) ? _url_path_join(['access', $params['slug']]) : null;
+        case 'register':
+            return 'register';
+        case 'login':
+            return 'login-member';
+        case 'login-panel':
+            return 'login-panel';
+        case 'logout':
+            return 'logout';
+        case 'forgot':
+            return 'forgot';
+        case 'reset-password':
+            return !empty($params['token']) ? _url_path_join(['reset-password', $params['token']]) : 'reset-password';
+        case 'dashboard':
+            return 'dashboard';
+        case 'affiliate':
+            return 'affiliate';
+        case 'profile':
+            return 'profile';
+        case 'ticket':
+            return !empty($params['token']) ? _url_path_join(['ticket', $params['token']]) : 'ticket';
+        case 'ticket-verify':
+            return !empty($params['token']) ? _url_path_join(['ticket', 'verify', $params['token']]) : _url_path_join(['ticket', 'verify']);
+        default:
+            return null;
+    }
+}
+
 function url($page, $params = []) {
+    $params = is_array($params) ? $params : [];
+    $path = _pretty_route_path($page, $params);
+    if ($path !== null) {
+        $queryParams = $params;
+        foreach (['slug', 'token'] as $consumedKey) {
+            unset($queryParams[$consumedKey]);
+        }
+        $url = base_url($path);
+        return $queryParams ? $url . '?' . http_build_query($queryParams) : $url;
+    }
+
     $q = array_merge(['p' => $page], $params);
     return base_url('index.php') . '?' . http_build_query($q);
 }
@@ -95,8 +161,69 @@ function setting_url($key, $default = '') {
     if ($value === '') return $default;
     if (preg_match('~^(https?:)?//~i', $value)) return $value;
     if (preg_match('~^(mailto:|tel:|#)~i', $value)) return $value;
-    if ($value[0] === '?') return base_url('index.php') . $value;
+    if ($value[0] === '?') {
+        parse_str(ltrim($value, '?'), $query);
+        $page = trim((string)($query['p'] ?? ''));
+        if ($page !== '') {
+            unset($query['p']);
+            return url($page, $query);
+        }
+        return base_url('index.php') . $value;
+    }
+    if (stripos($value, 'index.php?') === 0) {
+        parse_str((string)parse_url($value, PHP_URL_QUERY), $query);
+        $page = trim((string)($query['p'] ?? ''));
+        if ($page !== '') {
+            unset($query['p']);
+            return url($page, $query);
+        }
+    }
     return base_url(ltrim($value, '/'));
+}
+
+function canonical_url() {
+    $page = trim((string)($_GET['p'] ?? 'home'));
+    switch ($page) {
+        case 'home':
+            return url('home');
+        case 'sales':
+            return url('sales', ['slug' => (string)($_GET['slug'] ?? '')]);
+        case 'products':
+            return url('products');
+        case 'product':
+            return url('product', ['slug' => (string)($_GET['slug'] ?? '')]);
+        case 'checkout':
+            return url('checkout', ['slug' => (string)($_GET['slug'] ?? '')]);
+        case 'blog':
+            return url('blog');
+        case 'post':
+            return url('post', ['slug' => (string)($_GET['slug'] ?? '')]);
+        case 'access':
+            return url('access', ['slug' => (string)($_GET['slug'] ?? '')]);
+        case 'login':
+            return url('login');
+        case 'login-panel':
+            return url('login-panel');
+        case 'register':
+            return url('register');
+        case 'forgot':
+            return url('forgot');
+        case 'reset-password':
+            return url('reset-password', ['token' => (string)($_GET['token'] ?? '')]);
+        case 'dashboard':
+            return url('dashboard');
+        case 'affiliate':
+            return url('affiliate');
+        case 'profile':
+            return url('profile');
+        case 'ticket':
+            return url('ticket', ['token' => (string)($_GET['token'] ?? '')]);
+        case 'ticket-verify':
+            return url('ticket-verify', ['token' => (string)($_GET['token'] ?? '')]);
+        default:
+            $requestUri = trim((string)($_SERVER['REQUEST_URI'] ?? ''), '/');
+            return $requestUri === '' ? base_url() : base_url($requestUri);
+    }
 }
 
 function redirect($to) { header('Location: ' . $to); exit; }
