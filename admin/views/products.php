@@ -8,6 +8,9 @@ if (!empty($_GET['edit'])) {
 }
 $showForm = isset($_GET['new']) || $edit;
 $types = ['ecourse'=>'Ecourse','workshop'=>'Workshop','webinar'=>'Webinar Rekaman','membership'=>'Membership Premium','ebook'=>'Ebook','toolkit'=>'Toolkit','template'=>'Template'];
+$productSlug = trim((string)($edit['slug'] ?? ''));
+$productPublicUrl = $productSlug !== '' ? url('product', ['slug' => $productSlug]) : '';
+$productCheckoutUrl = $productSlug !== '' ? url('checkout', ['slug' => $productSlug]) : '';
 ?>
 <div class="page-title flexbetween">
   <div><h1>Produk</h1><p class="muted">Kelola ecourse, workshop, ebook, dan produk lainnya.</p></div>
@@ -37,6 +40,22 @@ $types = ['ecourse'=>'Ecourse','workshop'=>'Workshop','webinar'=>'Webinar Rekama
         <option value="publish" <?= (($edit['status'] ?? '')==='publish')?'selected':'' ?>>Publish</option>
         <option value="draft" <?= (($edit['status'] ?? '')==='draft')?'selected':'' ?>>Draft</option></select></label>
     </div>
+    <?php if ($edit && $productPublicUrl): ?>
+      <div class="admin-link-box">
+        <strong>Link Produk</strong>
+        <p class="muted">Gunakan link berikut untuk membuka halaman produk dan checkout tanpa perlu mencarinya manual.</p>
+        <div class="admin-link-row">
+          <span class="admin-link-label">Halaman Produk</span>
+          <a href="<?= e($productPublicUrl) ?>" target="_blank" rel="noopener" class="admin-link-url"><?= e($productPublicUrl) ?></a>
+        </div>
+        <div class="admin-link-actions">
+          <a href="<?= e($productPublicUrl) ?>" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Lihat Produk</a>
+          <a href="<?= e($productCheckoutUrl) ?>" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">Link Checkout</a>
+          <button type="button" class="btn btn-ghost btn-sm" data-copy-text="<?= e($productPublicUrl) ?>">Copy Link Produk</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-copy-text="<?= e($productCheckoutUrl) ?>">Copy Link Checkout</button>
+        </div>
+      </div>
+    <?php endif; ?>
     <div class="form-actions">
       <button class="btn btn-primary">Simpan Produk</button>
       <a href="<?= e(admin_url('products')) ?>" class="btn btn-ghost">Batal</a>
@@ -58,6 +77,10 @@ $types = ['ecourse'=>'Ecourse','workshop'=>'Workshop','webinar'=>'Webinar Rekama
           <td><?= (int)$r['price']===0?'Gratis':rupiah($r['price']) ?></td>
           <td><span class="badge badge-<?= $r['status']==='publish'?'approved':'pending' ?>"><?= e(ucfirst($r['status'])) ?></span></td>
           <td class="td-actions">
+            <a href="<?= e(url('product', ['slug' => $r['slug']])) ?>" class="btn btn-primary btn-sm" target="_blank" rel="noopener">Lihat Produk</a>
+            <a href="<?= e(url('checkout', ['slug' => $r['slug']])) ?>" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">Checkout</a>
+            <button type="button" class="btn btn-ghost btn-sm" data-copy-text="<?= e(url('product', ['slug' => $r['slug']])) ?>">Copy Produk</button>
+            <button type="button" class="btn btn-ghost btn-sm" data-copy-text="<?= e(url('checkout', ['slug' => $r['slug']])) ?>">Copy Checkout</button>
             <a href="<?= e(admin_url('lessons', ['product'=>$r['id']])) ?>" class="btn btn-ghost btn-sm">Materi</a>
             <a href="<?= e(admin_url('products', ['edit'=>$r['id']])) ?>" class="btn btn-ghost btn-sm">Edit</a>
             <form method="post" onsubmit="return confirm('Hapus produk ini beserta materinya?')" style="display:inline">

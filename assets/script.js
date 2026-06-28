@@ -2,6 +2,31 @@
 (function () {
   'use strict';
 
+  function playButtonClick() {
+    var AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    try {
+      if (!window.__tcButtonAudioCtx) window.__tcButtonAudioCtx = new AudioCtx();
+      var ctx = window.__tcButtonAudioCtx;
+      if (ctx.state === 'suspended') ctx.resume();
+
+      var oscillator = ctx.createOscillator();
+      var gain = ctx.createGain();
+      oscillator.type = 'triangle';
+      oscillator.frequency.setValueAtTime(720, ctx.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(520, ctx.currentTime + 0.07);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.035, ctx.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.09);
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.09);
+    } catch (err) {
+      // Abaikan jika browser atau device memblokir audio otomatis.
+    }
+  }
+
   // Tutup sidebar admin otomatis setelah memilih menu (tampilan HP)
   var toggle = document.getElementById('navtoggle');
   if (toggle) {
@@ -32,6 +57,48 @@
         var hint = inp.parentNode.querySelector('.hint');
         if (hint) hint.textContent = '✓ ' + inp.files[0].name;
       }
+    });
+  });
+
+  document.querySelectorAll('.btn').forEach(function (button) {
+    button.addEventListener('click', function () {
+      if (button.disabled || button.getAttribute('aria-disabled') === 'true') return;
+      playButtonClick();
+    }, { passive: true });
+  });
+
+  document.querySelectorAll('[data-copy-text]').forEach(function (button) {
+    var originalText = button.textContent;
+    button.addEventListener('click', function () {
+      var copyText = button.getAttribute('data-copy-text') || '';
+      if (!copyText) return;
+
+      function markCopied() {
+        button.textContent = 'Tersalin';
+        window.setTimeout(function () {
+          button.textContent = originalText;
+        }, 1400);
+      }
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(copyText).then(markCopied).catch(function () {});
+        return;
+      }
+
+      var temp = document.createElement('textarea');
+      temp.value = copyText;
+      temp.setAttribute('readonly', 'readonly');
+      temp.style.position = 'absolute';
+      temp.style.left = '-9999px';
+      document.body.appendChild(temp);
+      temp.select();
+      try {
+        document.execCommand('copy');
+        markCopied();
+      } catch (err) {
+        // Abaikan jika browser menolak clipboard fallback.
+      }
+      document.body.removeChild(temp);
     });
   });
 })();

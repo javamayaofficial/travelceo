@@ -302,7 +302,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,NOW())")->execute($data);
         }
         flash('success', 'Produk disimpan.');
-        redirect(admin_url('products'));
+        $savedId = $id ?: (int)db()->lastInsertId();
+        redirect(admin_url('products', ['edit' => $savedId]));
     }
     if ($act === 'delete_product') {
         db()->prepare("DELETE FROM products WHERE id=?")->execute([(int)$_POST['id']]);

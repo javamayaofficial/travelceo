@@ -37,20 +37,21 @@ img{max-width:100%;display:block}
 /* ---------- Buttons ---------- */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  font-family:Poppins,sans-serif;font-weight:600;font-size:.95rem;
+  font-family:Poppins,sans-serif;font-weight:700;font-size:.95rem;
   padding:12px 20px;border-radius:14px;border:1px solid transparent;
   cursor:pointer;text-align:center;transition:transform .05s,background .2s,box-shadow .2s;
-  min-height:46px;line-height:1.1;
+  min-height:46px;line-height:1.1;letter-spacing:.01em;
+  box-shadow:0 6px 18px rgba(15,26,51,.08);
 }
 .btn:active{transform:translateY(1px)}
 .btn-primary{background:var(--navy);color:#fff}
 .btn-primary:hover{background:var(--navy2)}
-.btn-gold{background:var(--gold);color:#3a2a08}
+.btn-gold{background:var(--gold);color:#241600}
 .btn-gold:hover{background:var(--gold2)}
-.btn-ghost{background:#fff;border-color:var(--line);color:var(--navy)}
-.btn-ghost:hover{border-color:var(--navy);background:#fafbfe}
-.btn-danger{background:var(--errbg);color:var(--err);border-color:#f6cccc}
-.btn-danger:hover{background:#f9d9d9}
+.btn-ghost{background:#fff;border-color:#bcc5d6;color:var(--navy2)}
+.btn-ghost:hover{border-color:var(--navy);background:#f4f7fc;color:var(--navy)}
+.btn-danger{background:#b91c1c;color:#fff;border-color:#991b1b}
+.btn-danger:hover{background:#991b1b}
 .btn-sm{padding:8px 14px;min-height:38px;font-size:.85rem;border-radius:11px}
 .btn-lg{padding:15px 26px;min-height:54px;font-size:1.02rem;border-radius:16px}
 .btn-block{width:100%}
@@ -466,6 +467,12 @@ textarea.code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem
 .table th{background:#fafbfd;font-weight:600;color:#4b5563;font-size:.8rem;text-transform:uppercase;letter-spacing:.03em}
 .table tr:last-child td{border-bottom:none}
 .td-actions{display:flex;gap:6px;flex-wrap:wrap}
+.admin-link-box{margin-top:8px;padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:#fbfcff}
+.admin-link-box strong{display:block;margin-bottom:4px;color:var(--navy)}
+.admin-link-row{display:flex;flex-direction:column;gap:4px;margin-top:10px}
+.admin-link-label{font-size:.85rem;font-weight:600;color:var(--muted)}
+.admin-link-url{font-size:.92rem;font-weight:600;color:var(--teal);word-break:break-all}
+.admin-link-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 
 /* ---------- Stat grid ---------- */
 .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:18px 0}
