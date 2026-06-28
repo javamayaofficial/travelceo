@@ -500,7 +500,7 @@ function checkout_process() {
             $activeWaUser = $waUser && empty($waUser['deleted_at']) ? $waUser : null;
 
             if ($activeEmailUser && $activeWaUser && (int)$activeEmailUser['id'] !== (int)$activeWaUser['id']) {
-                $errors[] = 'Email dan nomor WhatsApp terhubung ke dua akun yang berbeda. Gunakan salah satu data yang sesuai atau hubungi admin.';
+                $errors[] = 'Email dan nomor WhatsApp yang Anda masukkan terhubung ke akun yang berbeda. Silakan gunakan data yang sesuai dengan salah satu akun Anda, atau hubungi admin jika membutuhkan bantuan.';
             }
 
             if ($emailUser && !empty($emailUser['deleted_at'])) {
