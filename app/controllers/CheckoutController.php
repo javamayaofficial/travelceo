@@ -446,6 +446,7 @@ function checkout_process() {
     if ($bank === '' || !isset($methodMap[$bank])) $errors[] = 'Pilih metode pembayaran.';
     if ($bank === 'duitku' && !_duitku_is_ready()) $errors[] = 'Payment gateway Duitku belum siap digunakan. Silakan hubungi admin.';
 
+    $existingUser = null;
     if (!$u) {
         $buyerName = trim($_POST['buyer_name'] ?? '');
         $buyerEmail = trim($_POST['buyer_email'] ?? '');
@@ -459,29 +460,30 @@ function checkout_process() {
         }
 
         if (!$errors) {
+            $emailUser = null;
+            $waUser = null;
+
             $st = db()->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
             $st->execute([$buyerEmail]);
-            $existingUser = $st->fetch() ?: null;
+            $emailUser = $st->fetch() ?: null;
 
-            if ($existingUser) {
-                if (!empty($existingUser['deleted_at'])) {
-                    $errors[] = 'Email ini pernah digunakan dan akunnya sudah dihapus. Silakan hubungi admin untuk restore akun.';
-                }
-                $existingStatus = strtolower((string)($existingUser['member_status'] ?? 'approved'));
-                if ($existingStatus !== 'pending') {
-                    $errors[] = 'Email ini sudah terdaftar. Silakan login dulu sebelum melakukan checkout.';
-                }
-            }
-            if (!$existingUser && $normalizedWa !== '') {
-                $chkWa = db()->prepare("SELECT wa, deleted_at FROM users WHERE wa = ? LIMIT 1");
+            if ($normalizedWa !== '') {
+                $chkWa = db()->prepare("SELECT * FROM users WHERE wa = ? LIMIT 1");
                 $chkWa->execute([$normalizedWa]);
-                $waRow = $chkWa->fetch();
-                if ($waRow && !empty($waRow['deleted_at'])) {
-                    $errors[] = 'Nomor WhatsApp ini pernah digunakan dan akunnya sudah dihapus. Silakan hubungi admin untuk restore akun.';
-                } elseif ($waRow) {
-                    $errors[] = 'Nomor WhatsApp sudah dipakai akun lain. Silakan login dulu dengan akun yang sudah ada.';
-                }
+                $waUser = $chkWa->fetch() ?: null;
             }
+
+            if ($emailUser && !empty($emailUser['deleted_at'])) {
+                $errors[] = 'Email ini pernah digunakan dan akunnya sudah dihapus. Silakan hubungi admin untuk restore akun.';
+            }
+            if ($waUser && !empty($waUser['deleted_at'])) {
+                $errors[] = 'Nomor WhatsApp ini pernah digunakan dan akunnya sudah dihapus. Silakan hubungi admin untuk restore akun.';
+            }
+            if ($emailUser && $waUser && (int)$emailUser['id'] !== (int)$waUser['id']) {
+                $errors[] = 'Email dan nomor WhatsApp terhubung ke dua akun yang berbeda. Gunakan salah satu data yang sesuai atau hubungi admin.';
+            }
+
+            $existingUser = $emailUser ?: $waUser;
         }
     }
 
@@ -514,10 +516,15 @@ function checkout_process() {
                     $params[] = $buyerName;
                     $u['name'] = $buyerName;
                 }
-                if ($normalizedWa !== '' && $normalizedWa !== (string)($u['wa'] ?? '')) {
+                if ($normalizedWa !== '' && ($u['wa'] ?? '') === '') {
                     $updates[] = 'wa = ?';
                     $params[] = $normalizedWa;
                     $u['wa'] = $normalizedWa;
+                }
+                if ($buyerEmail !== '' && ($u['email'] ?? '') === '') {
+                    $updates[] = 'email = ?';
+                    $params[] = $buyerEmail;
+                    $u['email'] = $buyerEmail;
                 }
                 if ($updates) {
                     $params[] = $u['id'];
