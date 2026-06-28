@@ -232,6 +232,28 @@ function _checkout_generate_password($length = 10) {
     return $pass;
 }
 
+function _checkout_archive_deleted_user_identity(PDO $pdo, array $user, $clearEmail = true, $clearWa = true) {
+    $updates = [];
+    $params = [];
+    $stamp = date('YmdHis');
+
+    if ($clearEmail && !empty($user['email'])) {
+        $archivedEmail = 'deleted+' . (int)$user['id'] . '.' . $stamp . '@deleted.local';
+        $updates[] = 'email = ?';
+        $params[] = $archivedEmail;
+    }
+    if ($clearWa && !empty($user['wa'])) {
+        $updates[] = 'wa = NULL';
+    }
+    if (!$updates) {
+        return;
+    }
+
+    $params[] = (int)$user['id'];
+    $pdo->prepare("UPDATE users SET " . implode(', ', $updates) . " WHERE id = ? AND deleted_at IS NOT NULL")
+        ->execute($params);
+}
+
 /** Hitung diskon dari kupon. Return [valid(bool), discount(int), coupon|null, message] */
 function _apply_coupon($code, $product, $forUpdate = false) {
     $code = trim($code);
@@ -447,6 +469,7 @@ function checkout_process() {
     if ($bank === 'duitku' && !_duitku_is_ready()) $errors[] = 'Payment gateway Duitku belum siap digunakan. Silakan hubungi admin.';
 
     $existingUser = null;
+    $deletedMatches = [];
     if (!$u) {
         $buyerName = trim($_POST['buyer_name'] ?? '');
         $buyerEmail = trim($_POST['buyer_email'] ?? '');
@@ -473,17 +496,33 @@ function checkout_process() {
                 $waUser = $chkWa->fetch() ?: null;
             }
 
-            if ($emailUser && !empty($emailUser['deleted_at'])) {
-                $errors[] = 'Email ini pernah digunakan dan akunnya sudah dihapus. Silakan hubungi admin untuk restore akun.';
-            }
-            if ($waUser && !empty($waUser['deleted_at'])) {
-                $errors[] = 'Nomor WhatsApp ini pernah digunakan dan akunnya sudah dihapus. Silakan hubungi admin untuk restore akun.';
-            }
-            if ($emailUser && $waUser && (int)$emailUser['id'] !== (int)$waUser['id']) {
+            $activeEmailUser = $emailUser && empty($emailUser['deleted_at']) ? $emailUser : null;
+            $activeWaUser = $waUser && empty($waUser['deleted_at']) ? $waUser : null;
+
+            if ($activeEmailUser && $activeWaUser && (int)$activeEmailUser['id'] !== (int)$activeWaUser['id']) {
                 $errors[] = 'Email dan nomor WhatsApp terhubung ke dua akun yang berbeda. Gunakan salah satu data yang sesuai atau hubungi admin.';
             }
 
-            $existingUser = $emailUser ?: $waUser;
+            if ($emailUser && !empty($emailUser['deleted_at'])) {
+                $deletedMatches[(int)$emailUser['id']] = [
+                    'user' => $emailUser,
+                    'clear_email' => true,
+                    'clear_wa' => false,
+                ];
+            }
+            if ($waUser && !empty($waUser['deleted_at'])) {
+                if (!isset($deletedMatches[(int)$waUser['id']])) {
+                    $deletedMatches[(int)$waUser['id']] = [
+                        'user' => $waUser,
+                        'clear_email' => false,
+                        'clear_wa' => true,
+                    ];
+                } else {
+                    $deletedMatches[(int)$waUser['id']]['clear_wa'] = true;
+                }
+            }
+
+            $existingUser = $activeEmailUser ?: $activeWaUser;
         }
     }
 
@@ -506,6 +545,15 @@ function checkout_process() {
         if (!$u) {
             $buyerName = trim($_POST['buyer_name'] ?? '');
             $buyerEmail = trim($_POST['buyer_email'] ?? '');
+
+            foreach ($deletedMatches as $match) {
+                _checkout_archive_deleted_user_identity(
+                    $pdo,
+                    $match['user'],
+                    !empty($match['clear_email']),
+                    !empty($match['clear_wa'])
+                );
+            }
 
             if ($existingUser) {
                 $u = $existingUser;
