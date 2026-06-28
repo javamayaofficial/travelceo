@@ -150,7 +150,6 @@ function _duitku_create_payment(array $transaction, array $user, array $product)
         'callbackUrl' => $callbackUrl,
         'returnUrl' => $returnUrl,
         'expiryPeriod' => $cfg['expiry_period'],
-        'paymentMethod' => '',
     ];
 
     $result = http_post_json(_duitku_create_invoice_url(), $payload, [
@@ -161,6 +160,8 @@ function _duitku_create_payment(array $transaction, array $user, array $product)
     if (!$result['ok'] || empty($result['body']['paymentUrl'])) {
         $message = 'Gagal membuat invoice Duitku.';
         if (!empty($result['body']['Message'])) $message .= ' ' . $result['body']['Message'];
+        elseif (!empty($result['body']['message'])) $message .= ' ' . $result['body']['message'];
+        elseif (!empty($result['raw'])) $message .= ' Respons: ' . trim((string)$result['raw']);
         elseif (!empty($result['error'])) $message .= ' ' . $result['error'];
         throw new RuntimeException(trim($message));
     }
